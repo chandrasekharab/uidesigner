@@ -177,22 +177,24 @@ function transformNode(
   const merged: Record<string, unknown> = { ...defaults };
 
   // Apply canonical props (skip internal _src_ carry-overs)
-  for (const [key, value] of Object.entries(canonical.props)) {
+  for (const [key, value] of Object.entries(canonical.props ?? {})) {
     if (key.startsWith('_src_')) continue;
     if (key in merged) merged[key] = value;
   }
 
+  const bindings = canonical.bindings ?? {};
+
   // Inject binding hint into helper text if empty and field is bound
-  if (canonical.bindings.field && 'helperText' in merged && !merged.helperText) {
-    merged.helperText = `Bound: .${canonical.bindings.field}`;
+  if (bindings.field && 'helperText' in merged && !merged.helperText) {
+    merged.helperText = `Bound: .${bindings.field}`;
   }
 
   // Inject datasource label for dropdowns
-  if (canonical.bindings.dataSource && targetType === 'Dropdown') {
+  if (bindings.dataSource && targetType === 'Dropdown') {
     const opts = merged.options as Array<{ label: string; value: string }> | undefined;
     if (!opts || opts.length === 0) {
       merged.options = [
-        { label: `Data: ${canonical.bindings.dataSource}`, value: '__ds__' },
+        { label: `Data: ${bindings.dataSource}`, value: '__ds__' },
       ];
     }
   }
@@ -206,7 +208,7 @@ function transformNode(
     id: uuidv4(),
     type: targetType,
     props: merged as UIComponent['props'],
-    children: canonical.children.map((c) => transformNode(c, overrides)),
+    children: (canonical.children ?? []).map((c) => transformNode(c, overrides)),
   };
 }
 
@@ -230,8 +232,8 @@ function nodeCount(nodes: CanonicalComponent[]): { total: number; unmapped: numb
   let unmapped = 0;
   for (const n of nodes) {
     total++;
-    if (n._meta.unmapped) unmapped++;
-    const sub = nodeCount(n.children);
+    if (n._meta?.unmapped) unmapped++;
+    const sub = nodeCount(n.children ?? []);
     total += sub.total;
     unmapped += sub.unmapped;
   }
@@ -247,12 +249,12 @@ function validateNode(
     result.errors.push(`[${path}] Component is missing an id`);
     result.valid = false;
   }
-  if (node._meta.unmapped) {
+  if (node._meta?.unmapped) {
     result.warnings.push(
       `[${path}] Pega type "${node._meta.sourceType}" has no mapping — will render as Text.`
     );
   }
-  for (const [i, child] of node.children.entries()) {
+  for (const [i, child] of (node.children ?? []).entries()) {
     validateNode(child, `${path}.children[${i}]`, result);
   }
 }
@@ -294,6 +296,6 @@ export function flattenCanonicalTree(
 ): FlatCanonicalNode[] {
   return nodes.flatMap((node, i) => [
     { node, depth, path: `${prefix}[${i}]` },
-    ...flattenCanonicalTree(node.children, depth + 1, `${prefix}[${i}].children`),
+    ...flattenCanonicalTree(node.children ?? [], depth + 1, `${prefix}[${i}].children`),
   ]);
 }
