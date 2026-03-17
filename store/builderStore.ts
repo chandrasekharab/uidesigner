@@ -44,6 +44,11 @@ interface BuilderStore {
   // Renderer JSON (set from TransformationStudio when clicking "Render in A2UI")
   rendererJSON: string;
   setRendererJSON: (json: string) => void;
+
+  // Handoff from builder → transform: when set, TransformationStudio auto-creates
+  // a project with this JSON as the source text and clears the field.
+  pendingTransformJSON: string | null;
+  setPendingTransformJSON: (json: string | null) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -262,7 +267,12 @@ export const useBuilderStore = create<BuilderStore>()(
       set((s) => {
         s.rendererJSON = json;
       }),
-  })),
+    // ── Builder → Transform handoff ───────────────────────────────────────
+    pendingTransformJSON: null,
+    setPendingTransformJSON: (json) =>
+      set((s) => {
+        s.pendingTransformJSON = json;
+      }),  })),
   {
     name: 'ui-builder-state',
     storage: createJSONStorage(() =>

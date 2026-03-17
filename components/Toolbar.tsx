@@ -20,6 +20,7 @@ import {
   Hammer,
   ArrowLeftRight,
   Play,
+  SendToBack,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -35,6 +36,7 @@ export const Toolbar = memo(function Toolbar() {
   const components = useBuilderStore((s) => s.components);
   const appMode = useBuilderStore((s) => s.appMode);
   const setAppMode = useBuilderStore((s) => s.setAppMode);
+  const setPendingTransformJSON = useBuilderStore((s) => s.setPendingTransformJSON);
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,6 +49,12 @@ export const Toolbar = memo(function Toolbar() {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  const handleSendToTransform = useCallback(() => {
+    if (components.length === 0) return;
+    setPendingTransformJSON(JSON.stringify(components, null, 2));
+    setAppMode('transform');
+  }, [components, setPendingTransformJSON, setAppMode]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -179,6 +187,16 @@ export const Toolbar = memo(function Toolbar() {
           {iconBtn('Save', saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />, handleSave, saving)}
           {iconBtn('Load', loading ? <Loader2 size={15} className="animate-spin" /> : <FolderOpen size={15} />, handleLoad, loading)}
           {iconBtn('Clear', <Trash2 size={15} />, handleClear, components.length === 0)}
+          <div className="h-5 w-px bg-slate-200 mx-1" />
+          <button
+            onClick={handleSendToTransform}
+            disabled={components.length === 0}
+            title="Send canvas schema to Transform Studio as source"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors text-orange-600 hover:bg-orange-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <SendToBack size={15} />
+            <span className="hidden lg:inline">Send to Transform</span>
+          </button>
           <div className="h-5 w-px bg-slate-200 mx-1" />
           {iconBtn(
             previewMode ? 'Edit Mode' : 'Preview',

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useState, useCallback, useRef } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -27,7 +27,10 @@ import {
   type MappingOverride,
   type MappingValidationResult,
 } from '@/services/schemaTransformer';
-import { updateProject } from '@/services/transformProjectService';
+import {
+  updateProject,
+  createProject,
+} from '@/services/transformProjectService';
 import {
   convertCanonicalToA2UI,
   type TargetFormat,
@@ -130,11 +133,29 @@ const INIT: TStudioState = {
 export const TransformationStudio = memo(function TransformationStudio() {
   const setComponents = useBuilderStore((s) => s.setComponents);
   const setAppMode = useBuilderStore((s) => s.setAppMode);
+  const pendingTransformJSON = useBuilderStore((s) => s.pendingTransformJSON);
+  const setPendingTransformJSON = useBuilderStore((s) => s.setPendingTransformJSON);
 
   const [activeProject, setActiveProject] = useState<TransformProject | null>(null);
   const [state, setState] = useState<TStudioState>(INIT);
   const [saveIndicator, setSaveIndicator] = useState<'saved' | 'saving' | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Builder → Transform handoff ───────────────────────────────────────────
+  // When the builder fires “Send to Transform”, `pendingTransformJSON` is set.
+  // We create a new project, populate it with the canvas JSON as source text,
+  // select it, and clear the handoff signal.
+  useEffect(() => {
+    if (!pendingTransformJSON) return;
+    const project = createProject(
+      `Canvas export – ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    );
+    updateProject(project.id, { sourceText: pendingTransformJSON });
+    handleSelectProject({ ...project, sourceText: pendingTransformJSON });
+    setPendingTransformJSON(null);
+  // handleSelectProject is stable (useCallback with no deps that change here)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTransformJSON]);
 
   // ── Auto-save ─────────────────────────────────────────────────────────────
   const persistToProject = useCallback((projectId: string, s: TStudioState) => {
