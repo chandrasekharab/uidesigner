@@ -38,8 +38,12 @@ interface BuilderStore {
   togglePreview: () => void;
 
   // App mode
-  appMode: 'builder' | 'transform';
-  setAppMode: (mode: 'builder' | 'transform') => void;
+  appMode: 'builder' | 'transform' | 'renderer';
+  setAppMode: (mode: 'builder' | 'transform' | 'renderer') => void;
+
+  // Renderer JSON (set from TransformationStudio when clicking "Render in A2UI")
+  rendererJSON: string;
+  setRendererJSON: (json: string) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -250,6 +254,13 @@ export const useBuilderStore = create<BuilderStore>()(
     setAppMode: (mode) =>
       set((s) => {
         s.appMode = mode;
+      }),
+
+    // ── Renderer JSON ──────────────────────────────────────────────────────
+    rendererJSON: '',
+    setRendererJSON: (json) =>
+      set((s) => {
+        s.rendererJSON = json;
       }),
   })),
   {

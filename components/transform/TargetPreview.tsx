@@ -2,10 +2,11 @@
 
 import React, { memo } from 'react';
 import dynamic from 'next/dynamic';
-import { Download, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { Download, ArrowRight, CheckCircle2, Loader2, Play } from 'lucide-react';
 import type { UIComponent } from '@/types';
 import { ComponentRenderer } from '@/components/ComponentRenderer';
 import { cn } from '@/utils/cn';
+import { useBuilderStore } from '@/store/builderStore';
 
 const LazyEditor = dynamic(() => import('@/components/CodeMirrorEditor'), {
   ssr: false,
@@ -29,6 +30,13 @@ export const TargetPreview = memo(function TargetPreview({
   onLoadToCanvas,
   onExport,
 }: TargetPreviewProps) {
+  const setRendererJSON = useBuilderStore((s) => s.setRendererJSON);
+  const setAppMode = useBuilderStore((s) => s.setAppMode);
+
+  const handleRenderInA2UI = () => {
+    setRendererJSON(targetJSON);
+    setAppMode('renderer');
+  };
   if (!targetJSON) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-400 text-sm p-8 text-center">
@@ -66,6 +74,13 @@ export const TargetPreview = memo(function TargetPreview({
           >
             <ArrowRight size={13} />
             Load to Canvas
+          </button>
+          <button
+            onClick={handleRenderInA2UI}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+          >
+            <Play size={13} />
+            Render in A2UI
           </button>
         </div>
       </div>

@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Hammer,
   ArrowLeftRight,
+  Play,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -155,6 +156,17 @@ export const Toolbar = memo(function Toolbar() {
         >
           <ArrowLeftRight size={12} /> Transform
         </button>
+        <button
+          onClick={() => setAppMode('renderer')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'renderer'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          )}
+        >
+          <Play size={12} /> Render
+        </button>
       </div>
 
       {/* Builder-only controls */}
@@ -182,6 +194,13 @@ export const Toolbar = memo(function Toolbar() {
         <span className="text-xs text-orange-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-orange-50 px-2 py-1 rounded-md">
           <ArrowLeftRight size={12} />
           Schema Transformation Studio
+        </span>
+      )}
+
+      {appMode === 'renderer' && (
+        <span className="text-xs text-blue-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-md">
+          <Play size={12} />
+          A2UI Renderer Experience
         </span>
       )}
 

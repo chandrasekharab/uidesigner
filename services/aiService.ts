@@ -113,3 +113,60 @@ export async function autoGenerateIntermediateSchema(
   return generateUIFromPrompt(`Convert this Pega JSON to a UI form: ${snippet}`);
 }
 
+// ─── A2UI Renderer AI Functions ───────────────────────────────────────────────
+
+export interface AIOptimizeResult {
+  optimized: UIComponent[];
+  changes: string[];
+  mock: boolean;
+}
+
+export interface AIFixSuggestion {
+  error: string;
+  suggestion: string;
+  autoFix?: Record<string, unknown>;
+}
+
+export interface AIFixesResult {
+  suggestions: AIFixSuggestion[];
+  mock: boolean;
+}
+
+/**
+ * Ask AI to optimize a schema for A2UI rendering.
+ * Calls /api/ai/optimize-schema — returns mock output when no API key is set.
+ */
+export async function optimizeSchemaForA2UI(
+  schema: UIComponent[]
+): Promise<AIOptimizeResult> {
+  const res = await fetch('/api/ai/optimize-schema', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schema }),
+  });
+  if (!res.ok) throw new Error('AI optimization failed');
+  return res.json();
+}
+
+/**
+ * Ask AI to suggest fixes for rendering errors/warnings.
+ * Client-side mock — suitable for development; swap for a real call in production.
+ */
+export async function suggestFixesForRendering(
+  errors: string[]
+): Promise<AIFixesResult> {
+  const suggestions: AIFixSuggestion[] = errors.map((err) => {
+    if (err.toLowerCase().includes('label')) {
+      return { error: err, suggestion: 'Add a descriptive label to this component.' };
+    }
+    if (err.toLowerCase().includes('type')) {
+      return { error: err, suggestion: 'Ensure the "type" field is one of: Container, TextInput, Button, Dropdown, Text.' };
+    }
+    if (err.toLowerCase().includes('id')) {
+      return { error: err, suggestion: 'Each component must have a unique "id" field (UUID recommended).' };
+    }
+    return { error: err, suggestion: `Review the schema structure near: ${err}` };
+  });
+  return { suggestions, mock: true };
+}
+
