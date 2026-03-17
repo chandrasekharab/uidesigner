@@ -39,11 +39,11 @@ export interface RendererAdapter {
 const a2uiAdapter: RendererAdapter = {
   id: 'a2ui',
   label: 'A2UI SDK',
-  description: 'Renders via the A2UI runtime SDK (mock). Production-ready output.',
-  badgeColor: 'bg-blue-600',
+  description: 'Renders via the A2UI runtime SDK (mock). Uses Material Design 3 styles.',
+  badgeColor: 'bg-[#6750A4]',
   sdkName: MockA2UIClient.sdkName,
   sdkVersion: MockA2UIClient.version,
-  render: (schema, config) => MockA2UIClient.render(schema, config),
+  render: (schema, config) => MockA2UIClient.render(schema, { ...config, renderStyle: 'a2ui' }),
   validate: (schema) => MockA2UIClient.validate(schema),
 };
 
@@ -53,11 +53,11 @@ const a2uiAdapter: RendererAdapter = {
 const nativeAdapter: RendererAdapter = {
   id: 'native',
   label: 'Native (Builder)',
-  description: 'Renders via the built-in canvas renderer — ideal for quick comparison.',
+  description: 'Renders via the built-in canvas renderer — plain, no design system.',
   badgeColor: 'bg-indigo-600',
   sdkName: 'UIBuilder Native',
   sdkVersion: '1.0.0',
-  render: (schema, config) => MockA2UIClient.render(schema, config), // shares mock impl
+  render: (schema, config) => MockA2UIClient.render(schema, { ...config, renderStyle: 'native' }),
   validate: (schema) => MockA2UIClient.validate(schema),
 };
 
