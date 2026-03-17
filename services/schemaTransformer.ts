@@ -343,39 +343,51 @@ function a2uiPropsFromCanonical(
   const vs = canonical.validations ?? [];
   const props: Record<string, unknown> = {};
 
-  // ── 1. Passthrough ALL canonical props ────────────────────────────────────
-  // Skip internal carry-overs (_src_*). Wrap strings in A2UI literalString;
-  // numbers, booleans, arrays and objects are forwarded as-is.
   const A2UI_RENAMES: Record<string, string> = {
-    content:   'text',       // Text component body
-    type:      'inputType',  // HTML input type (text/email/password/number)
+    content:   'text',       // Text component body → A2UI "text"
+    type:      'inputType',  // HTML input type → A2UI "inputType"
   };
+
+  // ── 1. _src_* carry-forward keys (lowest priority) ────────────────────────
+  // Pega source fields that weren't explicitly in propMappings end up prefixed
+  // with _src_. Strip the prefix and include them so no source data is lost.
+  for (const [key, value] of Object.entries(p)) {
+    if (!key.startsWith('_src_') || value === undefined || value === null) continue;
+    const bareKey = key.slice(5); // strip '_src_'
+    const outKey = A2UI_RENAMES[bareKey] ?? bareKey;
+    props[outKey] = typeof value === 'string' ? strLiteral(value) : value;
+  }
+
+  // ── 2. Canonical mapped props (override _src_ values) ─────────────────────
+  // Strings → { literalString }, booleans/numbers/arrays → as-is.
   for (const [key, value] of Object.entries(p)) {
     if (key.startsWith('_src_') || value === undefined || value === null) continue;
     const outKey = A2UI_RENAMES[key] ?? key;
-    if (typeof value === 'string') {
-      props[outKey] = strLiteral(value);
-    } else {
-      props[outKey] = value;
-    }
+    props[outKey] = typeof value === 'string' ? strLiteral(value) : value;
   }
 
-  // ── 2. Top-level canonical label (may live outside props) ─────────────────
+  // ── 3. Top-level canonical label (may live outside props) ─────────────────
   if (canonical.label && !props.label) {
     props.label = strLiteral(canonical.label);
   }
 
-  // ── 3. Data bindings override static values ───────────────────────────────
+  // ── 4. Promote validation-derived attributes to top-level booleans ─────────
+  // A2UI expects these at the component property level, not only inside the
+  // nested validation block.
+  const requiredRule = vs.find((v) => v.rule === 'required');
+  const readOnlyRule = vs.find((v) => v.rule === 'custom' && v.condition === 'readOnly');
+  if (requiredRule) props.required = true;
+  if (readOnlyRule) props.readOnly = true;
+
+  // ── 5. Data bindings override static values ───────────────────────────────
   if (b.field)       props.value      = { path: `/${b.field}` };
   if (b.dataSource)  props.dataSource = { path: `/${b.dataSource}` };
-  // Forward any extra binding keys
   for (const [key, value] of Object.entries(b)) {
     if (key === 'field' || key === 'dataSource' || value === undefined) continue;
     if (typeof value === 'string') props[key] = { path: value };
   }
 
-  // ── 4. Validation rules ────────────────────────────────────────────────────
-  const requiredRule = vs.find((v) => v.rule === 'required');
+  // ── 6. Validation rules (structured block) ────────────────────────────────
   const minLen       = vs.find((v) => v.rule === 'minLength');
   const maxLen       = vs.find((v) => v.rule === 'maxLength');
   const patternRule  = vs.find((v) => v.rule === 'pattern');
@@ -388,10 +400,10 @@ function a2uiPropsFromCanonical(
     props.validation = validation;
   }
 
-  // ── 5. User prop overrides win ─────────────────────────────────────────────
+  // ── 7. User prop overrides win ─────────────────────────────────────────────
   if (override?.overrideProps) Object.assign(props, override.overrideProps);
 
-  // ── 6. Recurse children ────────────────────────────────────────────────────
+  // ── 8. Recurse children ────────────────────────────────────────────────────
   if (canonical.children?.length) {
     props.children = canonical.children.map((c) => a2uiNodeFromCanonical(c, overrides));
   }
