@@ -19,6 +19,7 @@ import {
   prepareSchema,
   autoRepairSchema,
   getSDKInfo,
+  isA2UIFormat,
 } from '@/services/a2uiRenderer';
 import { getRenderer, getAllRenderers, type RendererType } from '@/services/rendererFactory';
 import { optimizeSchemaForA2UI } from '@/services/aiService';
@@ -58,6 +59,7 @@ export function RendererExperience() {
   const [events, setEvents] = useState<A2UIEvent[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const [isGoogleFormat, setIsGoogleFormat] = useState(false);
   const [showRendererMenu, setShowRendererMenu] = useState(false);
 
   const renderers = getAllRenderers();
@@ -74,6 +76,13 @@ export function RendererExperience() {
     (json: string) => {
       setParseError(null);
       try {
+        // Detect Google A2UI format before parse
+        try {
+          const preliminary = JSON.parse(json);
+          setIsGoogleFormat(Array.isArray(preliminary) && isA2UIFormat(preliminary));
+        } catch {
+          setIsGoogleFormat(false);
+        }
         const schema = prepareSchema(json);
         const { schema: repaired } = autoRepairSchema(schema);
         const result = adapter.render(repaired, {
@@ -151,6 +160,11 @@ export function RendererExperience() {
           {sdkInfo.mock && (
             <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
               mock
+            </span>
+          )}
+          {isGoogleFormat && (
+            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+              Google A2UI format
             </span>
           )}
         </div>
