@@ -73,3 +73,27 @@ export interface CanonicalComponent {
   /** Internal metadata used by the mapping UI — not emitted in target output */
   _meta: CanonicalMeta;
 }
+
+// ─── Transform Project ────────────────────────────────────────────────────────
+// Persisted record representing a single end-to-end transformation pipeline.
+
+export type TransformStatus = 'draft' | 'parsed' | 'mapped' | 'complete';
+
+export interface MappingOverrideSerialized {
+  overrideTargetType?: string;
+  overrideProps?: Record<string, unknown>;
+}
+
+export interface TransformProject {
+  id: string;
+  name: string;
+  description?: string;
+  status: TransformStatus;
+  createdAt: string;   // ISO timestamp
+  updatedAt: string;   // ISO timestamp
+  // Pipeline data (each field holds the output of its step)
+  sourceText: string;
+  intermediateSchema: CanonicalComponent[];
+  overrides: Record<string, MappingOverrideSerialized>;   // keyed by canonical id
+  targetJSON: string;
+}
