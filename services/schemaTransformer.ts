@@ -343,18 +343,38 @@ function a2uiPropsFromCanonical(
   const vs = canonical.validations ?? [];
   const props: Record<string, unknown> = {};
 
-  if (p.label)                   props.label       = strLiteral(p.label);
-  if (p.placeholder)             props.placeholder = strLiteral(p.placeholder);
-  if (p.helperText)              props.helperText  = strLiteral(p.helperText);
-  if (p.content)                 props.text        = strLiteral(p.content);
-  if (p.disabled !== undefined)  props.disabled    = p.disabled;
-  if (p.required !== undefined)  props.required    = p.required;
-  if (p.type)                    props.inputType   = p.type;
+  // ── 1. Passthrough ALL canonical props ────────────────────────────────────
+  // Skip internal carry-overs (_src_*). Wrap strings in A2UI literalString;
+  // numbers, booleans, arrays and objects are forwarded as-is.
+  const A2UI_RENAMES: Record<string, string> = {
+    content:   'text',       // Text component body
+    type:      'inputType',  // HTML input type (text/email/password/number)
+  };
+  for (const [key, value] of Object.entries(p)) {
+    if (key.startsWith('_src_') || value === undefined || value === null) continue;
+    const outKey = A2UI_RENAMES[key] ?? key;
+    if (typeof value === 'string') {
+      props[outKey] = strLiteral(value);
+    } else {
+      props[outKey] = value;
+    }
+  }
 
+  // ── 2. Top-level canonical label (may live outside props) ─────────────────
+  if (canonical.label && !props.label) {
+    props.label = strLiteral(canonical.label);
+  }
+
+  // ── 3. Data bindings override static values ───────────────────────────────
   if (b.field)       props.value      = { path: `/${b.field}` };
   if (b.dataSource)  props.dataSource = { path: `/${b.dataSource}` };
+  // Forward any extra binding keys
+  for (const [key, value] of Object.entries(b)) {
+    if (key === 'field' || key === 'dataSource' || value === undefined) continue;
+    if (typeof value === 'string') props[key] = { path: value };
+  }
 
-  // Validation rules
+  // ── 4. Validation rules ────────────────────────────────────────────────────
   const requiredRule = vs.find((v) => v.rule === 'required');
   const minLen       = vs.find((v) => v.rule === 'minLength');
   const maxLen       = vs.find((v) => v.rule === 'maxLength');
@@ -368,10 +388,10 @@ function a2uiPropsFromCanonical(
     props.validation = validation;
   }
 
-  // User prop overrides win
+  // ── 5. User prop overrides win ─────────────────────────────────────────────
   if (override?.overrideProps) Object.assign(props, override.overrideProps);
 
-  // Recurse children
+  // ── 6. Recurse children ────────────────────────────────────────────────────
   if (canonical.children?.length) {
     props.children = canonical.children.map((c) => a2uiNodeFromCanonical(c, overrides));
   }
