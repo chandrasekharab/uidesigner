@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
 import type { UIComponent, ComponentType, ComponentProps } from '@/types';
@@ -92,6 +93,7 @@ function snapshot(
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useBuilderStore = create<BuilderStore>()(
+  persist(
   immer((set, get) => ({
     components: [],
     selectedId: null,
@@ -238,5 +240,14 @@ export const useBuilderStore = create<BuilderStore>()(
       set((s) => {
         s.previewMode = !s.previewMode;
       }),
-  }))
+  })),
+  {
+    name: 'ui-builder-state',
+    storage: createJSONStorage(() =>
+      typeof window !== 'undefined' ? localStorage : (undefined as never)
+    ),
+    // Only persist the component tree — skip history and UI-only state
+    partialize: (s) => ({ components: s.components }),
+  }
+  )
 );

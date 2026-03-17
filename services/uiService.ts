@@ -1,29 +1,23 @@
 import type { UIComponent } from '@/types';
 
-const API_BASE = '/api/ui';
+const STORAGE_KEY = 'ui-builder-saved';
 
 /**
- * Save the current UI component tree to the backend.
+ * Explicitly save the current UI to a named localStorage slot.
+ * (The Zustand store auto-saves drafts under a separate key.)
  */
 export async function saveUI(
   components: UIComponent[],
   name = 'Untitled UI'
 ): Promise<{ id: string; savedAt: string }> {
-  const res = await fetch(API_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ components, name }),
-  });
-
-  if (!res.ok) {
-    throw new Error('Failed to save UI');
-  }
-
-  return res.json();
+  const savedAt = new Date().toISOString();
+  const payload = { id: 'default', name, components, savedAt };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  return { id: 'default', savedAt };
 }
 
 /**
- * Load the saved UI component tree from the backend.
+ * Load the last explicitly saved UI from localStorage.
  */
 export async function loadUI(): Promise<{
   id: string;
@@ -31,11 +25,7 @@ export async function loadUI(): Promise<{
   name: string;
   savedAt: string;
 }> {
-  const res = await fetch(API_BASE);
-
-  if (!res.ok) {
-    throw new Error('Failed to load UI');
-  }
-
-  return res.json();
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) throw new Error('No saved UI found in localStorage.');
+  return JSON.parse(raw);
 }
