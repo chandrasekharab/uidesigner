@@ -49,6 +49,7 @@ export function createProject(name: string, description?: string): TransformProj
     sourceText: '',
     intermediateSchema: [],
     overrides: {},
+    targetFormat: 'native',
     targetJSON: '',
   };
   const projects = load();

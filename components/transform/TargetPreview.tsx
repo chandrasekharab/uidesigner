@@ -2,8 +2,9 @@
 
 import React, { memo } from 'react';
 import dynamic from 'next/dynamic';
-import { Download, ArrowRight, CheckCircle2, Loader2, Play } from 'lucide-react';
+import { Download, ArrowRight, CheckCircle2, Loader2, Play, Layers } from 'lucide-react';
 import type { UIComponent } from '@/types';
+import type { TargetFormat } from '@/services/schemaTransformer';
 import { ComponentRenderer } from '@/components/ComponentRenderer';
 import { cn } from '@/utils/cn';
 import { useBuilderStore } from '@/store/builderStore';
@@ -20,6 +21,7 @@ const LazyEditor = dynamic(() => import('@/components/CodeMirrorEditor'), {
 interface TargetPreviewProps {
   targetJSON: string;
   targetComponents: UIComponent[];
+  targetFormat: TargetFormat;
   onLoadToCanvas: () => void;
   onExport: () => void;
 }
@@ -27,6 +29,7 @@ interface TargetPreviewProps {
 export const TargetPreview = memo(function TargetPreview({
   targetJSON,
   targetComponents,
+  targetFormat,
   onLoadToCanvas,
   onExport,
 }: TargetPreviewProps) {
@@ -59,6 +62,15 @@ export const TargetPreview = memo(function TargetPreview({
             Target UI Schema — {targetComponents.length} root component
             {targetComponents.length !== 1 ? 's' : ''}
           </h3>
+          {/* Format badge */}
+          <span className={cn(
+            'ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide',
+            targetFormat === 'a2ui'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'bg-slate-100 text-slate-600'
+          )}>
+            {targetFormat === 'a2ui' ? 'Google A2UI' : 'Native'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -70,17 +82,25 @@ export const TargetPreview = memo(function TargetPreview({
           </button>
           <button
             onClick={onLoadToCanvas}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors"
+            disabled={targetFormat === 'a2ui'}
+            title={targetFormat === 'a2ui' ? 'Load to Canvas is available for Native format only' : undefined}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ArrowRight size={13} />
             Load to Canvas
           </button>
           <button
             onClick={handleRenderInA2UI}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors',
+              targetFormat === 'a2ui'
+                ? 'bg-indigo-600 hover:bg-indigo-700'
+                : 'bg-blue-600 hover:bg-blue-700'
+            )}
           >
-            <Play size={13} />
-            Render in A2UI
+            {targetFormat === 'a2ui'
+              ? <><Layers size={13} /> Open in A2UI Renderer</>
+              : <><Play size={13} /> Render in A2UI</>}
           </button>
         </div>
       </div>
@@ -108,6 +128,11 @@ export const TargetPreview = memo(function TargetPreview({
           <div className="px-4 py-2 bg-white border-b border-slate-200">
             <span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">
               Canvas Preview
+              {targetFormat === 'a2ui' && (
+                <span className="ml-2 text-indigo-500 normal-case font-normal">
+                  (use “Open in A2UI Renderer” for full A2UI preview)
+                </span>
+              )}
             </span>
           </div>
           <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-2">

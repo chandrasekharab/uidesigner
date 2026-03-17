@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import type { CanonicalComponent } from '@/types/canonical';
 import type { ComponentType } from '@/types';
-import type { MappingOverride } from '@/services/schemaTransformer';
+import type { MappingOverride, TargetFormat } from '@/services/schemaTransformer';
 import type { AIMappingSuggestion } from '@/services/aiService';
 import {
   flattenCanonicalTree,
@@ -38,6 +38,8 @@ interface MappingPanelProps {
   aiLoading: boolean;
   onRunAI: () => void;
   aiSuggestions: AIMappingSuggestion[] | null;
+  targetFormat: TargetFormat;
+  onTargetFormatChange: (f: TargetFormat) => void;
 }
 
 const DEPTH_INDENT = 20;
@@ -64,6 +66,8 @@ export const MappingPanel = memo(function MappingPanel({
   aiLoading,
   onRunAI,
   aiSuggestions,
+  targetFormat,
+  onTargetFormatChange,
 }: MappingPanelProps) {
   const flatNodes = useMemo(
     () => flattenCanonicalTree(intermediateSchema),
@@ -92,6 +96,31 @@ export const MappingPanel = memo(function MappingPanel({
           Mapping Configuration — {flatNodes.length} components
         </h3>
         <div className="flex items-center gap-3">
+          {/* Output format toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            <button
+              onClick={() => onTargetFormatChange('native')}
+              className={cn(
+                'px-2.5 py-1 rounded-md text-xs transition-colors',
+                targetFormat === 'native'
+                  ? 'bg-white shadow-sm text-slate-700 font-medium'
+                  : 'text-slate-500 hover:text-slate-700'
+              )}
+            >
+              Native
+            </button>
+            <button
+              onClick={() => onTargetFormatChange('a2ui')}
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-md text-xs transition-colors',
+                targetFormat === 'a2ui'
+                  ? 'bg-white shadow-sm text-indigo-600 font-semibold'
+                  : 'text-slate-500 hover:text-slate-700'
+              )}
+            >
+              <ArrowRight size={10} />Google A2UI
+            </button>
+          </div>
           <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
             <input
               type="checkbox"

@@ -78,7 +78,8 @@ export interface CanonicalComponent {
 // Persisted record representing a single end-to-end transformation pipeline.
 
 export type TransformStatus = 'draft' | 'parsed' | 'mapped' | 'complete';
-
+/** Output format for the generated target schema */
+export type TargetFormat = 'native' | 'a2ui';
 export interface MappingOverrideSerialized {
   overrideTargetType?: string;
   overrideProps?: Record<string, unknown>;
@@ -95,5 +96,6 @@ export interface TransformProject {
   sourceText: string;
   intermediateSchema: CanonicalComponent[];
   overrides: Record<string, MappingOverrideSerialized>;   // keyed by canonical id
+  targetFormat: TargetFormat;
   targetJSON: string;
 }

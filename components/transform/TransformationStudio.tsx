@@ -28,6 +28,10 @@ import {
   type MappingValidationResult,
 } from '@/services/schemaTransformer';
 import { updateProject } from '@/services/transformProjectService';
+import {
+  convertCanonicalToA2UI,
+  type TargetFormat,
+} from '@/services/schemaTransformer';
 import { suggestMappings, type AIMappingSuggestion } from '@/services/aiService';
 import type { CanonicalComponent, TransformProject, TransformStatus } from '@/types/canonical';
 import type { UIComponent } from '@/types';
@@ -70,6 +74,7 @@ function projectToState(project: TransformProject): TStudioState {
     intermediateText: schema.length ? JSON.stringify(schema, null, 2) : '',
     validation: schema.length ? validateMappings(schema) : null,
     overrides: overridesMap,
+    targetFormat: project.targetFormat ?? 'native',
     targetJSON: project.targetJSON,
     targetComponents: project.targetJSON
       ? (() => { try { return JSON.parse(project.targetJSON) as UIComponent[]; } catch { return []; } })()
@@ -97,6 +102,7 @@ interface TStudioState {
   aiLoading: boolean;
   aiSuggestions: AIMappingSuggestion[] | null;
   // Step 4
+  targetFormat: TargetFormat;
   targetComponents: UIComponent[];
   targetJSON: string;
 }
@@ -114,6 +120,7 @@ const INIT: TStudioState = {
   useAI: false,
   aiLoading: false,
   aiSuggestions: null,
+  targetFormat: 'native',
   targetComponents: [],
   targetJSON: '',
 };
@@ -139,6 +146,7 @@ export const TransformationStudio = memo(function TransformationStudio() {
         sourceText: s.sourceText,
         intermediateSchema: s.intermediateSchema,
         overrides: Object.fromEntries(Array.from(s.overrides.entries())),
+        targetFormat: s.targetFormat,
         targetJSON: s.targetJSON,
       });
       setSaveIndicator('saved');
@@ -249,10 +257,17 @@ export const TransformationStudio = memo(function TransformationStudio() {
 
   // ── Step 3 → 4: Generate target ───────────────────────────────────────────
   const handleGenerate = useCallback(() => {
-    const target = transformIntermediateToTarget(state.intermediateSchema, state.overrides);
-    const json = JSON.stringify(target, null, 2);
-    setStateAndSave((prev) => ({ ...prev, step: 4, targetComponents: target, targetJSON: json }));
-  }, [state.intermediateSchema, state.overrides, setStateAndSave]);
+    if (state.targetFormat === 'a2ui') {
+      const a2uiSchema = convertCanonicalToA2UI(state.intermediateSchema, state.overrides);
+      const json = JSON.stringify(a2uiSchema, null, 2);
+      // A2UI format doesn’t map back to UIComponent[] for canvas preview, so we keep an empty array
+      setStateAndSave((prev) => ({ ...prev, step: 4, targetComponents: [], targetJSON: json }));
+    } else {
+      const target = transformIntermediateToTarget(state.intermediateSchema, state.overrides);
+      const json = JSON.stringify(target, null, 2);
+      setStateAndSave((prev) => ({ ...prev, step: 4, targetComponents: target, targetJSON: json }));
+    }
+  }, [state.intermediateSchema, state.overrides, state.targetFormat, setStateAndSave]);
 
   // ── Step 4: Load to canvas ────────────────────────────────────────────────
   const handleLoadToCanvas = useCallback(() => {
@@ -265,10 +280,11 @@ export const TransformationStudio = memo(function TransformationStudio() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeProject?.name ?? 'transformed'}-ui-schema.json`;
+    const suffix = state.targetFormat === 'a2ui' ? '-a2ui-schema' : '-ui-schema';
+    a.download = `${activeProject?.name ?? 'transformed'}${suffix}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [state.targetJSON, activeProject]);
+  }, [state.targetJSON, state.targetFormat, activeProject]);
 
   // ── Navigation ────────────────────────────────────────────────────────────
   const canGoNext = useCallback((): boolean => {
@@ -428,12 +444,17 @@ export const TransformationStudio = memo(function TransformationStudio() {
                 aiLoading={state.aiLoading}
                 onRunAI={handleRunAI}
                 aiSuggestions={state.aiSuggestions}
+                targetFormat={state.targetFormat}
+                onTargetFormatChange={(f) =>
+                  setStateAndSave((prev) => ({ ...prev, targetFormat: f }))
+                }
               />
             )}
             {state.step === 4 && (
               <TargetPreview
                 targetJSON={state.targetJSON}
                 targetComponents={state.targetComponents}
+                targetFormat={state.targetFormat}
                 onLoadToCanvas={handleLoadToCanvas}
                 onExport={handleExport}
               />

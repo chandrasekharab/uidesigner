@@ -4,6 +4,7 @@ import type {
   CanonicalType,
   CanonicalBinding,
   CanonicalValidation,
+  TargetFormat,
 } from '@/types/canonical';
 import type { UIComponent, ComponentType } from '@/types';
 import {
@@ -298,4 +299,111 @@ export function flattenCanonicalTree(
     { node, depth, path: `${prefix}[${i}]` },
     ...flattenCanonicalTree(node.children ?? [], depth + 1, `${prefix}[${i}].children`),
   ]);
+}
+
+// ─── Step 3 (A2UI path): Canonical → Google A2UI SDK Format ──────────────────
+
+export type { TargetFormat };
+
+/** Map canonical intermediate types → Google A2UI component names */
+const CANONICAL_TO_A2UI_TYPE: Record<string, string> = {
+  TextField:  'TextField',
+  TextArea:   'TextArea',
+  DatePicker: 'DateTimeField',
+  Checkbox:   'Checkbox',
+  RadioGroup: 'RadioGroup',
+  Button:     'SubmitButton',
+  Container:  'FlexContainer',
+  Dropdown:   'SelectField',
+  Label:      'Label',
+  Text:       'TextContent',
+  Unknown:    'TextContent',
+};
+
+/** Map internal ComponentType (used in overrides) → Google A2UI component names */
+const OVERRIDE_TO_A2UI_TYPE: Record<ComponentType, string> = {
+  TextInput:  'TextField',
+  Button:     'Button',
+  Container:  'FlexContainer',
+  Dropdown:   'SelectField',
+  Text:       'TextContent',
+};
+
+function strLiteral(value: unknown): { literalString: string } {
+  return { literalString: String(value) };
+}
+
+function a2uiPropsFromCanonical(
+  canonical: CanonicalComponent,
+  overrides?: Map<string, MappingOverride>
+): Record<string, unknown> {
+  const override = overrides?.get(canonical.id);
+  const p = canonical.props ?? {};
+  const b = canonical.bindings ?? {};
+  const vs = canonical.validations ?? [];
+  const props: Record<string, unknown> = {};
+
+  if (p.label)                   props.label       = strLiteral(p.label);
+  if (p.placeholder)             props.placeholder = strLiteral(p.placeholder);
+  if (p.helperText)              props.helperText  = strLiteral(p.helperText);
+  if (p.content)                 props.text        = strLiteral(p.content);
+  if (p.disabled !== undefined)  props.disabled    = p.disabled;
+  if (p.required !== undefined)  props.required    = p.required;
+  if (p.type)                    props.inputType   = p.type;
+
+  if (b.field)       props.value      = { path: `/${b.field}` };
+  if (b.dataSource)  props.dataSource = { path: `/${b.dataSource}` };
+
+  // Validation rules
+  const requiredRule = vs.find((v) => v.rule === 'required');
+  const minLen       = vs.find((v) => v.rule === 'minLength');
+  const maxLen       = vs.find((v) => v.rule === 'maxLength');
+  const patternRule  = vs.find((v) => v.rule === 'pattern');
+  if (requiredRule || minLen || maxLen || patternRule) {
+    const validation: Record<string, unknown> = {};
+    if (requiredRule) validation.required  = { message: strLiteral(requiredRule.message) };
+    if (minLen)       validation.minLength = { value: minLen.value,      message: strLiteral(minLen.message) };
+    if (maxLen)       validation.maxLength = { value: maxLen.value,      message: strLiteral(maxLen.message) };
+    if (patternRule)  validation.pattern   = { value: patternRule.value, message: strLiteral(patternRule.message) };
+    props.validation = validation;
+  }
+
+  // User prop overrides win
+  if (override?.overrideProps) Object.assign(props, override.overrideProps);
+
+  // Recurse children
+  if (canonical.children?.length) {
+    props.children = canonical.children.map((c) => a2uiNodeFromCanonical(c, overrides));
+  }
+
+  return props;
+}
+
+function a2uiNodeFromCanonical(
+  canonical: CanonicalComponent,
+  overrides?: Map<string, MappingOverride>
+): Record<string, unknown> {
+  const override = overrides?.get(canonical.id);
+  const a2uiType: string = override?.overrideTargetType
+    ? (OVERRIDE_TO_A2UI_TYPE[override.overrideTargetType] ?? 'TextContent')
+    : (CANONICAL_TO_A2UI_TYPE[canonical.type] ?? 'TextContent');
+
+  return {
+    id: canonical.id,
+    component: { [a2uiType]: a2uiPropsFromCanonical(canonical, overrides) },
+  };
+}
+
+/**
+ * Convert the canonical intermediate schema directly to Google A2UI SDK format,
+ * preserving data bindings, validation rules, and type mapping overrides.
+ *
+ * Output is compatible with the format detected by `isA2UIFormat()` in a2uiRenderer.ts,
+ * so the generated JSON can be directly pasted into the A2UI Renderer tab.
+ */
+export function convertCanonicalToA2UI(
+  schema: CanonicalComponent[],
+  overrides?: Map<string, MappingOverride>
+): Record<string, unknown>[] {
+  return schema.map((c) => a2uiNodeFromCanonical(c, overrides));
 }
