@@ -128,6 +128,8 @@ function buildDebugNodes(
   return out;
 }
 
+const ce = React.createElement;
+
 function renderNode(
   component: UIComponent,
   cfg: A2UIConfig,
@@ -137,154 +139,143 @@ function renderNode(
 ): React.ReactElement {
   const id = component.id;
 
-  const debugBadge = debug ? (
-    <span
-      className="absolute -top-3 left-0 text-[9px] font-mono bg-blue-500 text-white px-1 rounded z-10 pointer-events-none"
-      title={`id: ${id}`}
-    >
-      {component.type}
-    </span>
-  ) : null;
+  const debugBadge = debug
+    ? ce('span', {
+        key: `badge-${id}`,
+        className:
+          'absolute -top-3 left-0 text-[9px] font-mono bg-blue-500 text-white px-1 rounded z-10 pointer-events-none',
+        title: `id: ${id}`,
+      }, component.type)
+    : null;
 
-  const wrap = (el: React.ReactElement) =>
-    debug ? (
-      <div className="relative" key={id}>
-        {debugBadge}
-        {el}
-      </div>
-    ) : (
-      <React.Fragment key={id}>{el}</React.Fragment>
-    );
+  const wrap = (el: React.ReactElement): React.ReactElement =>
+    debug
+      ? ce('div', { className: 'relative', key: id }, debugBadge, el)
+      : ce(React.Fragment, { key: id }, el);
 
   switch (component.type) {
     case 'Container': {
       const p = component.props as ContainerProps;
       const isRow = p.layout === 'horizontal';
+      const debugInfo = debug
+        ? ce('div', { className: 'text-[9px] font-mono text-blue-400 mb-1' },
+            `Container · ${p.layout} · ${component.children.length} children`)
+        : null;
       return wrap(
-        <div
-          key={id}
-          style={{
+        ce('div', {
+          key: id,
+          style: {
             gap: p.gap ?? 16,
             padding: p.padding ?? 20,
             backgroundColor:
               p.backgroundColor !== 'transparent' ? p.backgroundColor : undefined,
             borderRadius: p.borderRadius ?? 8,
-          }}
-          className={`flex ${isRow ? 'flex-row flex-wrap' : 'flex-col'} border ${theme.border} ${theme.containerBg} shadow-sm`}
-        >
-          {debug && (
-            <div className="text-[9px] font-mono text-blue-400 mb-1">
-              Container · {p.layout} · {component.children.length} children
-            </div>
-          )}
-          {component.children.map((c) =>
-            renderNode(c, cfg, theme, emit, debug)
-          )}
-        </div>
+          },
+          className: `flex ${isRow ? 'flex-row flex-wrap' : 'flex-col'} border ${theme.border} ${theme.containerBg} shadow-sm`,
+        },
+          debugInfo,
+          ...component.children.map((c) => renderNode(c, cfg, theme, emit, debug))
+        )
       );
     }
 
     case 'TextInput': {
       const p = component.props as TextInputProps;
+      const labelEl = p.label
+        ? ce('label', { className: `text-sm font-medium ${theme.label}` },
+            p.label,
+            p.required ? ce('span', { className: 'text-red-500 ml-0.5' }, '*') : null
+          )
+        : null;
+      const helperEl = p.helperText
+        ? ce('p', { className: `text-xs ${theme.helper}` }, p.helperText)
+        : null;
       return wrap(
-        <div key={id} className="flex flex-col gap-1.5">
-          {p.label && (
-            <label className={`text-sm font-medium ${theme.label}`}>
-              {p.label}
-              {p.required && <span className="text-red-500 ml-0.5">*</span>}
-            </label>
-          )}
-          <input
-            type={p.type ?? 'text'}
-            placeholder={p.placeholder}
-            defaultValue={p.value}
-            disabled={p.disabled}
-            className={`px-3 py-2 text-sm rounded-md border focus:outline-none focus:ring-2 transition-colors ${theme.input} ${theme.placeholder} disabled:opacity-50 disabled:cursor-not-allowed`}
-            onChange={(e) =>
-              emit({ type: 'change', componentId: id, componentType: 'TextInput', label: p.label, value: e.target.value })
-            }
-            onFocus={() =>
-              emit({ type: 'focus', componentId: id, componentType: 'TextInput', label: p.label })
-            }
-            onBlur={() =>
-              emit({ type: 'blur', componentId: id, componentType: 'TextInput', label: p.label })
-            }
-          />
-          {p.helperText && (
-            <p className={`text-xs ${theme.helper}`}>{p.helperText}</p>
-          )}
-        </div>
+        ce('div', { key: id, className: 'flex flex-col gap-1.5' },
+          labelEl,
+          ce('input', {
+            type: p.type ?? 'text',
+            placeholder: p.placeholder,
+            defaultValue: p.value,
+            disabled: p.disabled,
+            className: `px-3 py-2 text-sm rounded-md border focus:outline-none focus:ring-2 transition-colors ${theme.input} ${theme.placeholder} disabled:opacity-50 disabled:cursor-not-allowed`,
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+              emit({ type: 'change', componentId: id, componentType: 'TextInput', label: p.label, value: e.target.value }),
+            onFocus: () =>
+              emit({ type: 'focus', componentId: id, componentType: 'TextInput', label: p.label }),
+            onBlur: () =>
+              emit({ type: 'blur', componentId: id, componentType: 'TextInput', label: p.label }),
+          }),
+          helperEl
+        )
       );
     }
 
     case 'Button': {
       const p = component.props as ButtonProps;
-      const sizeClass = p.size === 'lg' ? 'px-6 py-3 text-base' : p.size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-4 py-2 text-sm';
+      const sizeClass =
+        p.size === 'lg' ? 'px-6 py-3 text-base' :
+        p.size === 'sm' ? 'px-2.5 py-1 text-xs' :
+        'px-4 py-2 text-sm';
       return wrap(
-        <button
-          key={id}
-          disabled={p.disabled}
-          onClick={() =>
-            emit({ type: 'click', componentId: id, componentType: 'Button', label: p.label })
-          }
-          className={`rounded-md font-medium transition-colors ${sizeClass} ${BUTTON_VARIANTS[p.variant ?? 'primary'] ?? BUTTON_VARIANTS.primary} ${p.fullWidth ? 'w-full' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {p.label}
-        </button>
+        ce('button', {
+          key: id,
+          disabled: p.disabled,
+          onClick: () =>
+            emit({ type: 'click', componentId: id, componentType: 'Button', label: p.label }),
+          className: `rounded-md font-medium transition-colors ${sizeClass} ${BUTTON_VARIANTS[p.variant ?? 'primary'] ?? BUTTON_VARIANTS.primary} ${p.fullWidth ? 'w-full' : ''} disabled:opacity-50 disabled:cursor-not-allowed`,
+        }, p.label)
       );
     }
 
     case 'Dropdown': {
       const p = component.props as DropdownProps;
+      const labelEl = p.label
+        ? ce('label', { className: `text-sm font-medium ${theme.label}` },
+            p.label,
+            p.required ? ce('span', { className: 'text-red-500 ml-0.5' }, '*') : null
+          )
+        : null;
+      const placeholderOpt = p.placeholder
+        ? ce('option', { value: '', disabled: true }, p.placeholder)
+        : null;
+      const optionEls = (p.options ?? []).map((opt) =>
+        ce('option', { key: opt.value, value: opt.value }, opt.label)
+      );
       return wrap(
-        <div key={id} className="flex flex-col gap-1.5">
-          {p.label && (
-            <label className={`text-sm font-medium ${theme.label}`}>
-              {p.label}
-              {p.required && <span className="text-red-500 ml-0.5">*</span>}
-            </label>
-          )}
-          <select
-            disabled={p.disabled}
-            className={`px-3 py-2 text-sm rounded-md border focus:outline-none focus:ring-2 cursor-pointer ${theme.input} ${theme.selectBg} disabled:opacity-50`}
-            onChange={(e) =>
-              emit({ type: 'change', componentId: id, componentType: 'Dropdown', label: p.label, value: e.target.value })
-            }
-            defaultValue=""
-          >
-            {p.placeholder && (
-              <option value="" disabled>
-                {p.placeholder}
-              </option>
-            )}
-            {p.options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        ce('div', { key: id, className: 'flex flex-col gap-1.5' },
+          labelEl,
+          ce('select', {
+            disabled: p.disabled,
+            className: `px-3 py-2 text-sm rounded-md border focus:outline-none focus:ring-2 cursor-pointer ${theme.input} ${theme.selectBg} disabled:opacity-50`,
+            onChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
+              emit({ type: 'change', componentId: id, componentType: 'Dropdown', label: p.label, value: e.target.value }),
+            defaultValue: '',
+          },
+            placeholderOpt,
+            ...optionEls
+          )
+        )
       );
     }
 
     case 'Text': {
       const p = component.props as TextProps;
       return wrap(
-        <p
-          key={id}
-          style={{ color: p.color, textAlign: p.align ?? 'left' }}
-          className={`${TEXT_CLASSES[p.variant ?? 'body'] ?? TEXT_CLASSES.body} ${p.bold ? 'font-bold' : ''} ${p.italic ? 'italic' : ''}`}
-        >
-          {p.content}
-        </p>
+        ce('p', {
+          key: id,
+          style: { color: p.color, textAlign: p.align ?? 'left' },
+          className: `${TEXT_CLASSES[p.variant ?? 'body'] ?? TEXT_CLASSES.body} ${p.bold ? 'font-bold' : ''} ${p.italic ? 'italic' : ''}`,
+        }, p.content)
       );
     }
 
     default:
       return wrap(
-        <div key={id} className="px-3 py-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-700">
-          Unknown component type: {component.type}
-        </div>
+        ce('div', {
+          key: id,
+          className: 'px-3 py-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-700',
+        }, `Unknown component type: ${component.type}`)
       );
   }
 }
@@ -330,7 +321,6 @@ export const MockA2UIClient = {
     const warnings: string[] = [];
     const theme = getTheme(config);
     const debug = config.debug ?? false;
-    const events: Array<Omit<A2UIEvent, 'timestamp'>> = [];
 
     const emit = (e: Omit<A2UIEvent, 'timestamp'>) => {
       config.onEvent?.({ ...e, timestamp: new Date() });
@@ -340,15 +330,11 @@ export const MockA2UIClient = {
       warnings.push('Empty schema — nothing to render');
     }
 
-    const elements = (
-      <div
-        className={`min-h-full p-6 space-y-4 ${theme.bg}`}
-        data-a2ui-root
-        data-a2ui-version={MOCK_A2UI_VERSION}
-      >
-        {schema.map((c) => renderNode(c, config, theme, emit, debug))}
-      </div>
-    );
+    const elements = ce('div', {
+      className: `min-h-full p-6 space-y-4 ${theme.bg}`,
+      'data-a2ui-root': true,
+      'data-a2ui-version': MOCK_A2UI_VERSION,
+    }, ...schema.map((c) => renderNode(c, config, theme, emit, debug)));
 
     const debugTree = buildDebugNodes(schema);
     let componentCount = 0;
