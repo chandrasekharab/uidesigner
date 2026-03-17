@@ -36,6 +36,10 @@ interface BuilderStore {
 
   // Preview
   togglePreview: () => void;
+
+  // App mode
+  appMode: 'builder' | 'transform';
+  setAppMode: (mode: 'builder' | 'transform') => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -239,6 +243,13 @@ export const useBuilderStore = create<BuilderStore>()(
     togglePreview: () =>
       set((s) => {
         s.previewMode = !s.previewMode;
+      }),
+
+    // ── App mode ───────────────────────────────────────────────────────────
+    appMode: 'builder',
+    setAppMode: (mode) =>
+      set((s) => {
+        s.appMode = mode;
       }),
   })),
   {

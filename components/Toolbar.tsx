@@ -17,6 +17,8 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Hammer,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -30,6 +32,8 @@ export const Toolbar = memo(function Toolbar() {
   const togglePreview = useBuilderStore((s) => s.togglePreview);
   const setComponents = useBuilderStore((s) => s.setComponents);
   const components = useBuilderStore((s) => s.components);
+  const appMode = useBuilderStore((s) => s.appMode);
+  const setAppMode = useBuilderStore((s) => s.setAppMode);
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,7 +122,7 @@ export const Toolbar = memo(function Toolbar() {
   return (
     <header className="h-12 bg-white border-b border-slate-200 flex items-center px-4 gap-1 relative z-30">
       {/* Brand */}
-      <div className="flex items-center gap-2 mr-4">
+      <div className="flex items-center gap-2 mr-3">
         <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
           <span className="text-white text-xs font-bold">UI</span>
         </div>
@@ -127,33 +131,64 @@ export const Toolbar = memo(function Toolbar() {
         </span>
       </div>
 
-      <div className="h-5 w-px bg-slate-200 mx-1" />
+      {/* Mode Tabs */}
+      <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5 mr-3">
+        <button
+          onClick={() => setAppMode('builder')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'builder'
+              ? 'bg-white text-indigo-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          )}
+        >
+          <Hammer size={12} /> Builder
+        </button>
+        <button
+          onClick={() => setAppMode('transform')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'transform'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          )}
+        >
+          <ArrowLeftRight size={12} /> Transform
+        </button>
+      </div>
 
-      {/* History */}
-      {iconBtn('Undo', <Undo2 size={15} />, undo, !canUndo)}
-      {iconBtn('Redo', <Redo2 size={15} />, redo, !canRedo)}
+      {/* Builder-only controls */}
+      {appMode === 'builder' && (
+        <>
+          <div className="h-5 w-px bg-slate-200 mx-1" />
+          {iconBtn('Undo', <Undo2 size={15} />, undo, !canUndo)}
+          {iconBtn('Redo', <Redo2 size={15} />, redo, !canRedo)}
+          <div className="h-5 w-px bg-slate-200 mx-1" />
+          {iconBtn('Save', saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />, handleSave, saving)}
+          {iconBtn('Load', loading ? <Loader2 size={15} className="animate-spin" /> : <FolderOpen size={15} />, handleLoad, loading)}
+          {iconBtn('Clear', <Trash2 size={15} />, handleClear, components.length === 0)}
+          <div className="h-5 w-px bg-slate-200 mx-1" />
+          {iconBtn(
+            previewMode ? 'Edit Mode' : 'Preview',
+            previewMode ? <EyeOff size={15} /> : <Eye size={15} />,
+            togglePreview,
+            false,
+            previewMode
+          )}
+        </>
+      )}
 
-      <div className="h-5 w-px bg-slate-200 mx-1" />
-
-      {/* Persist */}
-      {iconBtn('Save', saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />, handleSave, saving)}
-      {iconBtn('Load', loading ? <Loader2 size={15} className="animate-spin" /> : <FolderOpen size={15} />, handleLoad, loading)}
-      {iconBtn('Clear', <Trash2 size={15} />, handleClear, components.length === 0)}
-
-      <div className="h-5 w-px bg-slate-200 mx-1" />
-
-      {/* Preview */}
-      {iconBtn(
-        previewMode ? 'Edit Mode' : 'Preview',
-        previewMode ? <EyeOff size={15} /> : <Eye size={15} />,
-        togglePreview,
-        false,
-        previewMode
+      {appMode === 'transform' && (
+        <span className="text-xs text-orange-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-orange-50 px-2 py-1 rounded-md">
+          <ArrowLeftRight size={12} />
+          Schema Transformation Studio
+        </span>
       )}
 
       <div className="flex-1" />
 
-      {/* AI Button */}
+      {/* AI Button (builder mode only) */}
+      {appMode === 'builder' && (
       <button
         onClick={() => setShowAI((v) => !v)}
         className={cn(
@@ -166,6 +201,7 @@ export const Toolbar = memo(function Toolbar() {
         <Sparkles size={15} />
         <span className="hidden md:inline">AI Generate</span>
       </button>
+      )}
 
       {/* Toast */}
       {toast && (

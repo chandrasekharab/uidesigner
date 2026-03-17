@@ -9,12 +9,14 @@ interface CodeMirrorEditorProps {
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
+  readOnly?: boolean;
 }
 
 const CodeMirrorEditor = memo(function CodeMirrorEditor({
   value,
   onChange,
   onBlur,
+  readOnly = false,
 }: CodeMirrorEditorProps) {
   return (
     <CodeMirror
@@ -24,6 +26,7 @@ const CodeMirrorEditor = memo(function CodeMirrorEditor({
       extensions={[json()]}
       onChange={onChange}
       onBlur={onBlur}
+      editable={!readOnly}
       basicSetup={{
         lineNumbers: true,
         foldGutter: true,

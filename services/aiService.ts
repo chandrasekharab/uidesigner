@@ -1,4 +1,21 @@
 import type { UIComponent } from '@/types';
+import type { CanonicalType } from '@/types/canonical';
+import type { ComponentType } from '@/types';
+
+// ─── AI Mapping Suggestion Types ──────────────────────────────────────────────
+
+export interface AIMappingSuggestion {
+  sourceType: string;
+  suggestedCanonicalType: CanonicalType;
+  suggestedTargetType: ComponentType;
+  confidence: number;  // 0-1
+  reason: string;
+}
+
+export interface AISuggestMappingsResult {
+  suggestions: AIMappingSuggestion[];
+  mock: boolean;
+}
 
 // ─── AI Service ───────────────────────────────────────────────────────────────
 // This service abstracts all AI interactions.
@@ -65,3 +82,34 @@ export async function validateJSON(schema: unknown[]): Promise<AIValidateResult>
     suggestions,
   };
 }
+
+// ─── AI-Assisted Schema Transformation ───────────────────────────────────────
+
+/**
+ * Request AI-powered mapping suggestions for unmapped or ambiguous Pega types.
+ * Calls /api/ai/suggest-mappings — returns mock suggestions when no API key set.
+ */
+export async function suggestMappings(
+  pegaJson: unknown
+): Promise<AISuggestMappingsResult> {
+  const res = await fetch('/api/ai/suggest-mappings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pegaJson }),
+  });
+  if (!res.ok) throw new Error('AI mapping suggestion failed');
+  return res.json();
+}
+
+/**
+ * Ask the AI to generate a full intermediate canonical schema from Pega JSON.
+ * Currently delegates to the generate endpoint as a stub.
+ * Replace with a dedicated schema-generation prompt in production.
+ */
+export async function autoGenerateIntermediateSchema(
+  pegaJson: unknown
+): Promise<AIGenerateResult> {
+  const snippet = JSON.stringify(pegaJson).substring(0, 400);
+  return generateUIFromPrompt(`Convert this Pega JSON to a UI form: ${snippet}`);
+}
+
