@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useBuilderStore } from '@/store/builderStore';
 import { treeToJSON, jsonToTree } from '@/utils/jsonEngine';
 import { cn } from '@/utils/cn';
-import { Download, Upload, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Download, Upload, Copy, CheckCircle2, AlertCircle, ArrowLeftRight } from 'lucide-react';
 
 // Lazy-load CodeMirror to avoid SSR issues and improve bundle splitting
 const CodeMirrorEditor = dynamic(() => import('./CodeMirrorEditor'), {
@@ -22,6 +22,8 @@ const CodeMirrorEditor = dynamic(() => import('./CodeMirrorEditor'), {
 export const JSONPanel = memo(function JSONPanel() {
   const components = useBuilderStore((s) => s.components);
   const setComponents = useBuilderStore((s) => s.setComponents);
+  const setPendingTransformJSON = useBuilderStore((s) => s.setPendingTransformJSON);
+  const setAppMode = useBuilderStore((s) => s.setAppMode);
 
   const liveJSON = useMemo(() => treeToJSON(components), [components]);
 
@@ -55,6 +57,12 @@ export const JSONPanel = memo(function JSONPanel() {
   const handleBlur = useCallback(() => {
     setIsEditing(false);
   }, []);
+
+  const handleSendToTransform = useCallback(() => {
+    if (components.length === 0) return;
+    setPendingTransformJSON(liveJSON);
+    setAppMode('transform');
+  }, [liveJSON, components.length, setPendingTransformJSON, setAppMode]);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(liveJSON);
@@ -113,6 +121,15 @@ export const JSONPanel = memo(function JSONPanel() {
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={handleSendToTransform}
+            disabled={components.length === 0}
+            title="Send schema to Transform Studio"
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold text-orange-400 hover:bg-orange-900/40 hover:text-orange-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border border-orange-800/50 mr-1"
+          >
+            <ArrowLeftRight size={11} />
+            Transform
+          </button>
           <button
             onClick={handleCopy}
             title="Copy JSON"
