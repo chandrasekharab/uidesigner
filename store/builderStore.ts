@@ -41,6 +41,10 @@ interface BuilderStore {
   appMode: 'builder' | 'transform' | 'renderer';
   setAppMode: (mode: 'builder' | 'transform' | 'renderer') => void;
 
+  // Theme
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+
   // Renderer JSON (set from TransformationStudio when clicking "Render in A2UI")
   rendererJSON: string;
   setRendererJSON: (json: string) => void;
@@ -260,7 +264,12 @@ export const useBuilderStore = create<BuilderStore>()(
       set((s) => {
         s.appMode = mode;
       }),
-
+    // ── Theme ──────────────────────────────────────────────────────────
+    theme: 'light',
+    toggleTheme: () =>
+      set((s) => {
+        s.theme = s.theme === 'light' ? 'dark' : 'light';
+      }),
     // ── Renderer JSON ──────────────────────────────────────────────────────
     rendererJSON: '',
     setRendererJSON: (json) =>
@@ -278,8 +287,8 @@ export const useBuilderStore = create<BuilderStore>()(
     storage: createJSONStorage(() =>
       typeof window !== 'undefined' ? localStorage : (undefined as never)
     ),
-    // Only persist the component tree — skip history and UI-only state
-    partialize: (s) => ({ components: s.components }),
+    // Only persist the component tree and theme — skip history and UI-only state
+    partialize: (s) => ({ components: s.components, theme: s.theme }),
   }
   )
 );

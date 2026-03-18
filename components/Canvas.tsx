@@ -59,7 +59,7 @@ function SortableItem({ component, selectedId, onSelect, previewMode }: Sortable
         <div
           {...attributes}
           {...listeners}
-          className="absolute -left-5 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 z-10"
+          className="absolute -left-5 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 z-10"
         >
           <GripVertical size={14} />
         </div>
@@ -99,7 +99,7 @@ function DroppableCanvas({
       }}
       className={cn(
         'min-h-full p-6 transition-colors',
-        isOver && 'bg-indigo-50',
+        isOver && 'bg-indigo-50 dark:bg-indigo-900/10',
         components.length === 0 && 'flex items-center justify-center'
       )}
     >
@@ -108,13 +108,13 @@ function DroppableCanvas({
           'flex flex-col items-center justify-center gap-3',
           'border-2 border-dashed rounded-xl p-12 text-center',
           'transition-colors',
-          isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300'
+          isOver ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/10' : 'border-slate-300 dark:border-slate-700'
         )}>
           <div className="text-4xl">🖼️</div>
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Drag components from the left panel
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             Your UI will appear here
           </p>
         </div>

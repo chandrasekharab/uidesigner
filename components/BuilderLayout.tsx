@@ -75,7 +75,7 @@ export const BuilderLayout = memo(function BuilderLayout() {
       <div className="flex flex-1 overflow-hidden">
         {!previewMode && <Palette />}
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 relative">
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 relative">
           {previewMode && (
             <div className="sticky top-0 z-10 bg-indigo-600 text-white text-xs font-medium py-1 text-center tracking-wide">
               PREVIEW MODE — Click &ldquo;Edit Mode&rdquo; in the toolbar to make changes

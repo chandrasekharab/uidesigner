@@ -59,9 +59,9 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* ── Center: Rendered Output ─────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 overflow-hidden border-r border-slate-200">
+      <div className="flex flex-col flex-1 overflow-hidden border-r border-slate-200 dark:border-slate-700">
         {/* Sub-header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-100 border-b border-slate-200 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span
               className={cn(
@@ -71,7 +71,7 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
             >
               {adapter.label}
             </span>
-            <span className="text-[11px] text-slate-500 font-mono">{adapter.sdkVersion}</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{adapter.sdkVersion}</span>
             {debug && (
               <span className="text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded font-medium">
                 DEBUG
@@ -91,7 +91,7 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
         <div
           className={cn(
             'flex-1 overflow-y-auto p-6',
-            isDark ? 'bg-gray-900' : 'bg-slate-50'
+            isDark ? 'bg-gray-900' : 'bg-slate-50 dark:bg-slate-950'
           )}
         >
           {parseError ? (
@@ -103,14 +103,14 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
               </div>
             </div>
           ) : !renderResult ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 gap-3">
               <Zap size={32} className="opacity-30" />
               <p className="text-sm">Click Re-render to display the schema</p>
             </div>
           ) : (
             <div className="max-w-2xl mx-auto">
               {/* SDK banner */}
-              <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-400 font-mono">
+              <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 <Zap size={10} />
                 Rendered by {adapter.sdkName} · {renderResult.componentCount} component
                 {renderResult.componentCount !== 1 ? 's' : ''}
@@ -146,10 +146,10 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
       </div>
 
       {/* ── Right: Event Log + Debug Tree ───────────────────────────────────── */}
-      <div className="w-56 flex flex-col bg-white overflow-hidden flex-shrink-0">
+      <div className="w-56 flex flex-col bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
         {/* Events header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 flex-shrink-0">
-          <span className="text-xs font-semibold text-slate-600">Event Log</span>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Event Log</span>
           {events.length > 0 && (
             <button
               onClick={onClearEvents}
@@ -164,10 +164,10 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
         {/* Events list */}
         <div className="flex-1 overflow-y-auto">
           {events.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-24 text-slate-400">
+            <div className="flex flex-col items-center justify-center h-24 text-slate-400 dark:text-slate-500">
               <Info size={16} className="mb-1 opacity-40" />
               <p className="text-[11px]">Interact with the form</p>
-              <p className="text-[10px] text-slate-300">to see events here</p>
+              <p className="text-[10px] text-slate-300 dark:text-slate-600">to see events here</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -177,20 +177,20 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
                     <span
                       className={cn(
                         'text-[9px] font-bold uppercase px-1 py-0.5 rounded',
-                        EVENT_COLORS[ev.type] ?? 'text-slate-600 bg-slate-100'
+                        EVENT_COLORS[ev.type] ?? 'text-slate-600 bg-slate-100 dark:text-slate-300 dark:bg-slate-700'
                       )}
                     >
                       {ev.type}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono ml-auto">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono ml-auto">
                       {formatTime(ev.timestamp)}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-700 font-medium truncate">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-200 font-medium truncate">
                     {ev.label ?? ev.componentType}
                   </p>
                   {ev.value !== undefined && (
-                    <p className="text-[10px] text-slate-500 truncate font-mono">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate font-mono">
                       → {JSON.stringify(ev.value)}
                     </p>
                   )}
@@ -203,7 +203,7 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
         {/* Debug tree */}
         {debug && renderResult && renderResult.debugTree.length > 0 && (
           <>
-            <div className="flex items-center gap-1 px-3 py-1.5 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+            <div className="flex items-center gap-1 px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex-shrink-0">
               <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide">
                 Component Tree
               </span>
@@ -212,16 +212,16 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
               {renderResult.debugTree.map((node) => (
                 <div
                   key={node.id}
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-blue-50 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                   style={{ paddingLeft: `${8 + node.depth * 12}px` }}
                 >
                   {node.depth > 0 && (
-                    <ChevronRight size={9} className="text-slate-300 flex-shrink-0" />
+                    <ChevronRight size={9} className="text-slate-300 dark:text-slate-600 flex-shrink-0" />
                   )}
                   <span className="text-[9px] font-mono font-bold text-blue-500 flex-shrink-0">
                     {node.type}
                   </span>
-                  <span className="text-[10px] text-slate-600 truncate ml-1">{node.label}</span>
+                  <span className="text-[10px] text-slate-600 dark:text-slate-400 truncate ml-1">{node.label}</span>
                 </div>
               ))}
             </div>

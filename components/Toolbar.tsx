@@ -21,6 +21,8 @@ import {
   ArrowLeftRight,
   Play,
   SendToBack,
+  Moon,
+  Sun,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -36,6 +38,8 @@ export const Toolbar = memo(function Toolbar() {
   const components = useBuilderStore((s) => s.components);
   const appMode = useBuilderStore((s) => s.appMode);
   const setAppMode = useBuilderStore((s) => s.setAppMode);
+  const theme = useBuilderStore((s) => s.theme);
+  const toggleTheme = useBuilderStore((s) => s.toggleTheme);
   const setPendingTransformJSON = useBuilderStore((s) => s.setPendingTransformJSON);
 
   const [saving, setSaving] = useState(false);
@@ -119,8 +123,8 @@ export const Toolbar = memo(function Toolbar() {
         'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium',
         'transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
         active
-          ? 'bg-indigo-100 text-indigo-700'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100'
       )}
     >
       {icon}
@@ -129,26 +133,26 @@ export const Toolbar = memo(function Toolbar() {
   );
 
   return (
-    <header className="h-12 bg-white border-b border-slate-200 flex items-center px-4 gap-1 relative z-30">
+    <header className="h-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-1 relative z-30">
       {/* Brand */}
       <div className="flex items-center gap-2 mr-3">
         <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
           <span className="text-white text-xs font-bold">UI</span>
         </div>
-        <span className="font-bold text-slate-800 text-sm hidden sm:block">
+        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm hidden sm:block">
           Low-Code Builder
         </span>
       </div>
 
       {/* Mode Tabs */}
-      <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5 mr-3">
+      <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 gap-0.5 mr-3">
         <button
           onClick={() => setAppMode('builder')}
           className={cn(
             'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
             appMode === 'builder'
-              ? 'bg-white text-indigo-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           )}
         >
           <Hammer size={12} /> Builder
@@ -158,8 +162,8 @@ export const Toolbar = memo(function Toolbar() {
           className={cn(
             'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
             appMode === 'transform'
-              ? 'bg-white text-orange-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           )}
         >
           <ArrowLeftRight size={12} /> Transform
@@ -169,8 +173,8 @@ export const Toolbar = memo(function Toolbar() {
           className={cn(
             'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
             appMode === 'renderer'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           )}
         >
           <Play size={12} /> Render
@@ -187,17 +191,17 @@ export const Toolbar = memo(function Toolbar() {
           {iconBtn('Save', saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />, handleSave, saving)}
           {iconBtn('Load', loading ? <Loader2 size={15} className="animate-spin" /> : <FolderOpen size={15} />, handleLoad, loading)}
           {iconBtn('Clear', <Trash2 size={15} />, handleClear, components.length === 0)}
-          <div className="h-5 w-px bg-slate-200 mx-1" />
+          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
           <button
             onClick={handleSendToTransform}
             disabled={components.length === 0}
             title="Send canvas schema to Transform Studio as source"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors text-orange-600 hover:bg-orange-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <SendToBack size={15} />
             <span className="hidden lg:inline">Send to Transform</span>
           </button>
-          <div className="h-5 w-px bg-slate-200 mx-1" />
+          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
           {iconBtn(
             previewMode ? 'Edit Mode' : 'Preview',
             previewMode ? <EyeOff size={15} /> : <Eye size={15} />,
@@ -209,20 +213,29 @@ export const Toolbar = memo(function Toolbar() {
       )}
 
       {appMode === 'transform' && (
-        <span className="text-xs text-orange-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-orange-50 px-2 py-1 rounded-md">
+        <span className="text-xs text-orange-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-md">
           <ArrowLeftRight size={12} />
           Schema Transformation Studio
         </span>
       )}
 
       {appMode === 'renderer' && (
-        <span className="text-xs text-blue-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-md">
+        <span className="text-xs text-blue-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
           <Play size={12} />
           A2UI Renderer Experience
         </span>
       )}
 
       <div className="flex-1" />
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mr-1"
+      >
+        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
 
       {/* AI Button (builder mode only) */}
       {appMode === 'builder' && (
@@ -231,8 +244,8 @@ export const Toolbar = memo(function Toolbar() {
         className={cn(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
           showAI
-            ? 'bg-purple-100 text-purple-700'
-            : 'bg-slate-100 text-slate-700 hover:bg-purple-50 hover:text-purple-700'
+            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-700'
         )}
       >
         <Sparkles size={15} />
@@ -255,22 +268,22 @@ export const Toolbar = memo(function Toolbar() {
 
       {/* AI Popover */}
       {showAI && (
-        <div className="absolute right-4 top-14 bg-white border border-slate-200 rounded-xl shadow-xl p-4 w-80 z-50">
+        <div className="absolute right-4 top-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-4 w-80 z-50">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={16} className="text-purple-600" />
-            <h3 className="text-sm font-semibold text-slate-800">AI UI Generator</h3>
-            <span className="ml-auto text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">AI UI Generator</h3>
+            <span className="ml-auto text-[10px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded font-medium">
               Mock
             </span>
           </div>
-          <p className="text-xs text-slate-500 mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Describe a UI (e.g. &quot;login form&quot;, &quot;contact form&quot;). Add{' '}
-            <code className="bg-slate-100 px-1 rounded">NEXT_PUBLIC_AI_API_KEY</code> for real AI.
+            <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">NEXT_PUBLIC_AI_API_KEY</code> for real AI.
           </p>
           <div className="flex gap-2">
             <input
               type="text"
-              className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="flex-1 px-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
               placeholder="login form, dashboard..."
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}

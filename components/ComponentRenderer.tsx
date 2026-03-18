@@ -8,7 +8,7 @@ import { cn } from '@/utils/cn';
 
 const BUTTON_VARIANTS: Record<string, string> = {
   primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
-  secondary: 'bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200',
+  secondary: 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600',
   danger: 'bg-red-500 text-white hover:bg-red-600',
   ghost: 'text-indigo-600 hover:bg-indigo-50',
 };
@@ -24,7 +24,7 @@ const TEXT_VARIANTS: Record<string, string> = {
   h2: 'text-2xl font-bold',
   h3: 'text-xl font-semibold',
   body: 'text-sm',
-  caption: 'text-xs text-slate-500',
+  caption: 'text-xs text-slate-500 dark:text-slate-400',
   label: 'text-sm font-medium',
 };
 
@@ -52,7 +52,7 @@ function renderContainer(component: UIComponent, isSelected: boolean, onSelect: 
       )}
     >
       {!previewMode && component.children.length === 0 && (
-        <div className="flex items-center justify-center h-12 text-xs text-slate-400 border border-dashed border-slate-300 rounded-md w-full">
+        <div className="flex items-center justify-center h-12 text-xs text-slate-400 dark:text-slate-500 border border-dashed border-slate-300 dark:border-slate-600 rounded-md w-full">
           Drop components here
         </div>
       )}
@@ -72,7 +72,7 @@ function renderTextInput(props: TextInputProps) {
   return (
     <div className="flex flex-col gap-1">
       {props.label && (
-        <label className="text-xs font-medium text-slate-700">
+        <label className="text-xs font-medium text-slate-700 dark:text-slate-200">
           {props.label}
           {props.required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -83,9 +83,9 @@ function renderTextInput(props: TextInputProps) {
         disabled={props.disabled}
         readOnly
         className={cn(
-          'px-3 py-2 text-sm rounded-md border border-slate-300 bg-white',
+          'px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100',
           'focus:outline-none focus:ring-2 focus:ring-indigo-300',
-          props.disabled && 'opacity-50 cursor-not-allowed bg-slate-50'
+          props.disabled && 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900'
         )}
       />
       {props.helperText && (
@@ -116,7 +116,7 @@ function renderDropdown(props: DropdownProps) {
   return (
     <div className="flex flex-col gap-1">
       {props.label && (
-        <label className="text-xs font-medium text-slate-700">
+        <label className="text-xs font-medium text-slate-700 dark:text-slate-200">
           {props.label}
           {props.required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -124,7 +124,7 @@ function renderDropdown(props: DropdownProps) {
       <select
         disabled={props.disabled}
         className={cn(
-          'px-3 py-2 text-sm rounded-md border border-slate-300 bg-white',
+          'px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100',
           'focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer',
           props.disabled && 'opacity-50 cursor-not-allowed'
         )}

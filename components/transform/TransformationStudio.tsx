@@ -340,21 +340,21 @@ export const TransformationStudio = memo(function TransformationStudio() {
       />
 
       {/* Main pipeline area */}
-      <div className="flex flex-col flex-1 overflow-hidden bg-slate-50">
+      <div className="flex flex-col flex-1 overflow-hidden bg-slate-50 dark:bg-slate-950">
         {/* Step indicator bar */}
-        <div className="flex items-center bg-white border-b border-slate-200 px-4 py-2 gap-0 flex-shrink-0">
+        <div className="flex items-center bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-2 gap-0 flex-shrink-0">
           {/* Active project name */}
           {activeProject ? (
-            <span className="text-xs font-semibold text-slate-700 mr-3 truncate max-w-[160px]">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 mr-3 truncate max-w-[160px]">
               {activeProject.name}
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-xs text-slate-400 mr-3">
+            <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 mr-3">
               <FolderOpen size={12} /> Select a project
             </span>
           )}
 
-          <div className="h-4 w-px bg-slate-200 mr-3" />
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mr-3" />
 
           {STEPS.map((s, i) => (
             <React.Fragment key={s.id}>
@@ -368,12 +368,12 @@ export const TransformationStudio = memo(function TransformationStudio() {
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                   !activeProject
-                    ? 'text-slate-300 cursor-not-allowed'
+                    ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
                     : state.step === s.id
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : s.id < state.step
                     ? 'text-indigo-600 hover:bg-indigo-50 cursor-pointer'
-                    : 'text-slate-400 cursor-not-allowed'
+                    : 'text-slate-400 dark:text-slate-500 cursor-not-allowed'
                 )}
               >
                 {activeProject && s.id < state.step
@@ -382,7 +382,7 @@ export const TransformationStudio = memo(function TransformationStudio() {
                 <span>{s.label}</span>
               </button>
               {i < STEPS.length - 1 && (
-                <ChevronRight size={12} className="text-slate-300 mx-0.5 flex-shrink-0" />
+                <ChevronRight size={12} className="text-slate-300 dark:text-slate-600 mx-0.5 flex-shrink-0" />
               )}
             </React.Fragment>
           ))}
@@ -393,7 +393,7 @@ export const TransformationStudio = memo(function TransformationStudio() {
           {saveIndicator && (
             <span className={cn(
               'flex items-center gap-1 text-[11px] mr-3',
-              saveIndicator === 'saving' ? 'text-slate-400' : 'text-green-600'
+              saveIndicator === 'saving' ? 'text-slate-400 dark:text-slate-500' : 'text-green-600'
             )}>
               <Save size={11} />
               {saveIndicator === 'saving' ? 'Saving…' : 'Saved'}
@@ -405,7 +405,7 @@ export const TransformationStudio = memo(function TransformationStudio() {
             <button
               onClick={handleBack}
               disabled={!activeProject || state.step === 1}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft size={13} /> Back
             </button>
@@ -423,12 +423,12 @@ export const TransformationStudio = memo(function TransformationStudio() {
 
         {/* Empty state */}
         {!activeProject ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
               <FolderOpen size={28} className="opacity-40" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-slate-600">No project selected</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No project selected</p>
               <p className="text-xs mt-1">Create or select a project from the left panel to begin.</p>
             </div>
           </div>

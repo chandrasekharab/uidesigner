@@ -55,10 +55,10 @@ export const TargetPreview = memo(function TargetPreview({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-white flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
         <div className="flex items-center gap-2">
           <CheckCircle2 size={16} className="text-green-500" />
-          <h3 className="text-sm font-semibold text-slate-700">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Target UI Schema — {targetComponents.length} root component
             {targetComponents.length !== 1 ? 's' : ''}
           </h3>
@@ -67,7 +67,7 @@ export const TargetPreview = memo(function TargetPreview({
             'ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide',
             targetFormat === 'a2ui'
               ? 'bg-indigo-100 text-indigo-700'
-              : 'bg-slate-100 text-slate-600'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
           )}>
             {targetFormat === 'a2ui' ? 'Google A2UI' : 'Native'}
           </span>
@@ -75,7 +75,7 @@ export const TargetPreview = memo(function TargetPreview({
         <div className="flex items-center gap-2">
           <button
             onClick={onExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 transition-colors"
           >
             <Download size={13} />
             Export JSON
@@ -108,7 +108,7 @@ export const TargetPreview = memo(function TargetPreview({
       {/* Two-column: JSON + Canvas Preview */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: JSON output */}
-        <div className="w-1/2 flex flex-col border-r border-slate-200">
+        <div className="w-1/2 flex flex-col border-r border-slate-200 dark:border-slate-700">
           <div className="px-4 py-2 bg-slate-800 border-b border-slate-700">
             <span className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">
               Generated JSON
@@ -125,8 +125,8 @@ export const TargetPreview = memo(function TargetPreview({
 
         {/* Right: Canvas Preview */}
         <div className="w-1/2 flex flex-col">
-          <div className="px-4 py-2 bg-white border-b border-slate-200">
-            <span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">
+          <div className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
               Canvas Preview
               {targetFormat === 'a2ui' && (
                 <span className="ml-2 text-indigo-500 normal-case font-normal">
@@ -135,7 +135,7 @@ export const TargetPreview = memo(function TargetPreview({
               )}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-2">
+          <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950 space-y-2">
             {targetComponents.map((c) => (
               <ComponentRenderer
                 key={c.id}

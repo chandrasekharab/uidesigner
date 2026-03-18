@@ -23,7 +23,7 @@ interface FieldProps {
 function Field({ label, children }: FieldProps) {
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
         {label}
       </label>
       {children}
@@ -32,10 +32,10 @@ function Field({ label, children }: FieldProps) {
 }
 
 const inputClass =
-  'w-full px-2.5 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors';
+  'w-full px-2.5 py-1.5 text-sm rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors';
 
 const selectClass =
-  'w-full px-2.5 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors cursor-pointer';
+  'w-full px-2.5 py-1.5 text-sm rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors cursor-pointer';
 
 // ─── Per-type Property Forms ──────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ function ContainerEditor({
       <Field label="Border Color">
         <input
           type="color"
-          className="w-full h-8 rounded cursor-pointer border border-slate-200"
+          className="w-full h-8 rounded cursor-pointer border border-slate-200 dark:border-slate-600"
           value={props.borderColor ?? '#e2e8f0'}
           onChange={(e) => onChange({ borderColor: e.target.value })}
         />
@@ -100,7 +100,7 @@ function ContainerEditor({
       <Field label="Background Color">
         <input
           type="color"
-          className="w-full h-8 rounded cursor-pointer border border-slate-200"
+          className="w-full h-8 rounded cursor-pointer border border-slate-200 dark:border-slate-600"
           value={props.backgroundColor === 'transparent' ? '#ffffff' : (props.backgroundColor ?? '#ffffff')}
           onChange={(e) => onChange({ backgroundColor: e.target.value })}
         />
@@ -153,7 +153,7 @@ function TextInputEditor({
       </Field>
       <Field label="Options">
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.required ?? false}
@@ -162,7 +162,7 @@ function TextInputEditor({
             />
             Required
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.disabled ?? false}
@@ -218,7 +218,7 @@ function ButtonEditor({
       </Field>
       <Field label="Options">
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.fullWidth ?? false}
@@ -227,7 +227,7 @@ function ButtonEditor({
             />
             Full Width
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.disabled ?? false}
@@ -290,7 +290,7 @@ function DropdownEditor({
       </Field>
       <Field label="Options">
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.required ?? false}
@@ -299,7 +299,7 @@ function DropdownEditor({
             />
             Required
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.disabled ?? false}
@@ -359,14 +359,14 @@ function TextEditor({
       <Field label="Color">
         <input
           type="color"
-          className="w-full h-8 rounded cursor-pointer border border-slate-200"
+          className="w-full h-8 rounded cursor-pointer border border-slate-200 dark:border-slate-600"
           value={props.color ?? '#1e293b'}
           onChange={(e) => onChange({ color: e.target.value })}
         />
       </Field>
       <Field label="Style">
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.bold ?? false}
@@ -375,7 +375,7 @@ function TextEditor({
             />
             Bold
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
             <input
               type="checkbox"
               checked={props.italic ?? false}
@@ -416,10 +416,10 @@ export const PropertyEditor = memo(function PropertyEditor() {
 
   if (!component) {
     return (
-      <aside className="w-64 flex-shrink-0 bg-white border-l border-slate-200 flex flex-col items-center justify-center p-6 text-center">
+      <aside className="w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-6 text-center">
         <div className="text-3xl mb-3">🖱️</div>
-        <p className="text-sm text-slate-500 font-medium">No component selected</p>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">No component selected</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
           Click a component on the canvas to edit its properties.
         </p>
       </aside>
@@ -427,11 +427,11 @@ export const PropertyEditor = memo(function PropertyEditor() {
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-white border-l border-slate-200 flex flex-col overflow-hidden">
+    <aside className="w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <div>
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Properties
           </h2>
           <p className="text-sm font-semibold text-indigo-600 mt-0.5">{component.type}</p>
@@ -440,14 +440,14 @@ export const PropertyEditor = memo(function PropertyEditor() {
           <button
             onClick={handleDelete}
             title="Delete component"
-            className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
           >
             <Trash2 size={14} />
           </button>
           <button
             onClick={() => selectComponent(null)}
             title="Deselect"
-            className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
           >
             <X size={14} />
           </button>
@@ -455,7 +455,7 @@ export const PropertyEditor = memo(function PropertyEditor() {
       </div>
 
       {/* ID display */}
-      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
+      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
         <p className="text-[10px] font-mono text-slate-400 truncate" title={component.id}>
           id: {component.id}
         </p>

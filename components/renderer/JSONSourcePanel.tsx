@@ -97,16 +97,16 @@ export function JSONSourcePanel({
   }
 
   return (
-    <div className="w-64 flex flex-col border-r border-slate-200 bg-white overflow-hidden flex-shrink-0">
+    <div className="w-64 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
       {/* Header */}
-      <div className="px-3 py-2.5 border-b border-slate-200 flex-shrink-0">
-        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+      <div className="px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
           JSON Source
         </p>
       </div>
 
       {/* Source tabs */}
-      <div className="flex border-b border-slate-200 flex-shrink-0">
+      <div className="flex border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
         {SOURCE_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -115,8 +115,8 @@ export function JSONSourcePanel({
             className={cn(
               'flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-colors',
               sourceType === tab.id
-                ? `bg-slate-50 border-b-2 border-indigo-500 ${tab.color}`
-                : 'text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed'
+                ? `bg-slate-50 dark:bg-slate-800 border-b-2 border-indigo-500 ${tab.color}`
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed'
             )}
             title={
               tab.id === 'transformed' && !rendererJSON
@@ -162,7 +162,7 @@ export function JSONSourcePanel({
 
       {/* Errors / warnings list */}
       {(validation.errors.length > 0 || validation.warnings.length > 0) && (
-        <div className="px-2 py-1.5 border-b border-slate-100 space-y-1 bg-slate-50 flex-shrink-0 max-h-28 overflow-y-auto">
+        <div className="px-2 py-1.5 border-b border-slate-100 dark:border-slate-800 space-y-1 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0 max-h-28 overflow-y-auto">
           {validation.errors.map((e, i) => (
             <p key={i} className="text-[10px] text-red-600 flex items-start gap-1">
               <XCircle size={9} className="mt-0.5 flex-shrink-0" />

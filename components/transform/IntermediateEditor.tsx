@@ -39,16 +39,16 @@ export const IntermediateEditor = memo(function IntermediateEditor({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-white">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         <div className="flex items-center gap-2">
           <GitBranch size={16} className="text-indigo-500" />
-          <h3 className="text-sm font-semibold text-slate-700">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Intermediate Canonical Schema
           </h3>
         </div>
         {validation && (
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-slate-400">
+            <span className="text-slate-400 dark:text-slate-500">
               {validation.totalNodes} nodes
             </span>
             <span className="text-green-600 font-medium">

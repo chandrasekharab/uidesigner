@@ -105,15 +105,15 @@ export const ProjectsPanel = memo(function ProjectsPanel({
   );
 
   return (
-    <div className="w-60 flex flex-col border-r border-slate-200 bg-white overflow-hidden flex-shrink-0">
+    <div className="w-60 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 flex-shrink-0">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
         <div className="flex items-center gap-1.5">
           <Layers size={13} className="text-indigo-500" />
-          <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
             Projects
           </span>
-          <span className="ml-1 text-[10px] bg-slate-100 text-slate-500 rounded-full px-1.5 py-0.5 font-medium">
+          <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full px-1.5 py-0.5 font-medium">
             {projects.length}
           </span>
         </div>
@@ -138,12 +138,12 @@ export const ProjectsPanel = memo(function ProjectsPanel({
               if (e.key === 'Escape') { setCreating(false); setNewName(''); }
             }}
             placeholder="Project name…"
-            className="flex-1 text-xs px-2 py-1 rounded border border-indigo-300 outline-none focus:ring-1 focus:ring-indigo-400 bg-white"
+            className="flex-1 text-xs px-2 py-1 rounded border border-indigo-300 outline-none focus:ring-1 focus:ring-indigo-400 bg-white dark:bg-slate-800 dark:border-indigo-600 dark:text-slate-100"
           />
           <button onClick={handleCreate} className="text-green-600 hover:text-green-700">
             <Check size={14} />
           </button>
-          <button onClick={() => { setCreating(false); setNewName(''); }} className="text-slate-400 hover:text-slate-600">
+          <button onClick={() => { setCreating(false); setNewName(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
             <X size={14} />
           </button>
         </div>
@@ -152,7 +152,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
       {/* Project list */}
       <div className="flex-1 overflow-y-auto">
         {projects.length === 0 && !creating && (
-          <div className="flex flex-col items-center justify-center h-32 text-slate-400 gap-2 px-4 text-center">
+          <div className="flex flex-col items-center justify-center h-32 text-slate-400 dark:text-slate-500 gap-2 px-4 text-center">
             <FolderOpen size={22} className="opacity-40" />
             <p className="text-[11px]">No projects yet.<br />Click <strong>New</strong> to create one.</p>
           </div>
@@ -169,10 +169,10 @@ export const ProjectsPanel = memo(function ProjectsPanel({
               key={project.id}
               onClick={() => !isEditing && !isConfirmDelete && onSelect(project)}
               className={cn(
-                'group relative flex flex-col px-3 py-2.5 border-b border-slate-100 cursor-pointer transition-colors',
+                'group relative flex flex-col px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 cursor-pointer transition-colors',
                 isActive
-                  ? 'bg-indigo-50 border-l-2 border-l-indigo-500'
-                  : 'hover:bg-slate-50 border-l-2 border-l-transparent'
+                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-2 border-l-indigo-500'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800 border-l-2 border-l-transparent'
               )}
             >
               {/* Name row */}
@@ -187,13 +187,13 @@ export const ProjectsPanel = memo(function ProjectsPanel({
                       if (e.key === 'Escape') { setEditingId(null); }
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex-1 text-xs px-1.5 py-0.5 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-indigo-400"
+                    className="flex-1 text-xs px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 outline-none focus:ring-1 focus:ring-indigo-400 dark:bg-slate-800 dark:text-slate-100"
                   />
                 ) : (
                   <span
                     className={cn(
                       'flex-1 text-xs font-semibold truncate leading-tight',
-                      isActive ? 'text-indigo-700' : 'text-slate-700'
+                      isActive ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'
                     )}
                   >
                     {project.name}
@@ -213,7 +213,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
                         setEditName(project.name);
                       }}
                       title="Rename"
-                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors"
+                      className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     >
                       <Pencil size={10} />
                     </button>
@@ -223,7 +223,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
                         setConfirmDeleteId(project.id);
                       }}
                       title="Delete"
-                      className="p-0.5 rounded hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors"
+                      className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-600 transition-colors"
                     >
                       <Trash2 size={10} />
                     </button>
@@ -235,7 +235,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
                     <button onClick={(e) => { e.stopPropagation(); handleRename(project.id); }}
                       className="p-0.5 rounded hover:bg-green-100 text-green-600"><Check size={11} /></button>
                     <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
-                      className="p-0.5 rounded hover:bg-slate-100 text-slate-400"><X size={11} /></button>
+                      className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500"><X size={11} /></button>
                   </div>
                 )}
               </div>
@@ -255,7 +255,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(null)}
-                    className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] hover:bg-slate-200"
+                    className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[10px] hover:bg-slate-200 dark:hover:bg-slate-600"
                   >
                     Cancel
                   </button>
@@ -269,7 +269,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
                     <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', sc.dot)} />
                     {STATUS_LABELS[project.status]}
                   </span>
-                  <span className="text-[10px] text-slate-400 ml-auto">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-auto">
                     {formatDate(project.updatedAt)}
                   </span>
                 </div>

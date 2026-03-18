@@ -34,17 +34,17 @@ export const SourceViewer = memo(function SourceViewer({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-white">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         <div className="flex items-center gap-2">
           <FileJson size={16} className="text-orange-500" />
-          <h3 className="text-sm font-semibold text-slate-700">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Source: Pega Constellation JSON
           </h3>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={onLoadSample}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 transition-colors"
           >
             Load Sample
           </button>

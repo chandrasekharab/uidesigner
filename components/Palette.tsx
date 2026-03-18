@@ -41,10 +41,10 @@ const PaletteCard = memo(function PaletteCard({ item }: PaletteCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        'flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-slate-200',
-        'bg-white cursor-grab active:cursor-grabbing select-none',
-        'hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-sm',
-        'transition-all duration-150 text-sm font-medium text-slate-700',
+        'flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700',
+        'bg-white dark:bg-slate-800 cursor-grab active:cursor-grabbing select-none',
+        'hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:shadow-sm',
+        'transition-all duration-150 text-sm font-medium text-slate-700 dark:text-slate-200',
         isDragging && 'opacity-40 scale-95'
       )}
     >
@@ -58,9 +58,9 @@ const PaletteCard = memo(function PaletteCard({ item }: PaletteCardProps) {
 
 export const Palette = memo(function Palette() {
   return (
-    <aside className="w-56 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col">
-      <div className="px-4 py-3 border-b border-slate-200">
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+    <aside className="w-56 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           Components
         </h2>
       </div>
@@ -71,8 +71,8 @@ export const Palette = memo(function Palette() {
         ))}
       </div>
 
-      <div className="px-4 py-3 border-t border-slate-100">
-        <p className="text-[11px] text-slate-400 leading-relaxed">
+      <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
           Drag components onto the canvas to build your UI.
         </p>
       </div>

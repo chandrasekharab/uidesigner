@@ -82,7 +82,7 @@ export const MappingPanel = memo(function MappingPanel({
 
   if (flatNodes.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+      <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
         No intermediate schema loaded yet.
       </div>
     );
@@ -91,20 +91,20 @@ export const MappingPanel = memo(function MappingPanel({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-white flex-shrink-0">
-        <h3 className="text-sm font-semibold text-slate-700">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Mapping Configuration — {flatNodes.length} components
         </h3>
         <div className="flex items-center gap-3">
           {/* Output format toggle */}
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
             <button
               onClick={() => onTargetFormatChange('native')}
               className={cn(
                 'px-2.5 py-1 rounded-md text-xs transition-colors',
                 targetFormat === 'native'
-                  ? 'bg-white shadow-sm text-slate-700 font-medium'
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-700 dark:text-slate-100 font-medium'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               )}
             >
               Native
@@ -114,14 +114,14 @@ export const MappingPanel = memo(function MappingPanel({
               className={cn(
                 'flex items-center gap-1 px-2.5 py-1 rounded-md text-xs transition-colors',
                 targetFormat === 'a2ui'
-                  ? 'bg-white shadow-sm text-indigo-600 font-semibold'
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 font-semibold'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               )}
             >
               <ArrowRight size={10} />Google A2UI
             </button>
           </div>
-          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
+          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 dark:text-slate-300">
             <input
               type="checkbox"
               checked={useAI}
@@ -157,7 +157,7 @@ export const MappingPanel = memo(function MappingPanel({
       )}
 
       {/* Column headers */}
-      <div className="grid grid-cols-[2fr_1fr_20px_1fr_1fr_2fr] gap-2 px-5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wide flex-shrink-0">
+      <div className="grid grid-cols-[2fr_1fr_20px_1fr_1fr_2fr] gap-2 px-5 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex-shrink-0">
         <span>Component</span>
         <span>Canonical Type</span>
         <span></span>
@@ -185,7 +185,7 @@ export const MappingPanel = memo(function MappingPanel({
               key={node.id}
               className={cn(
                 'grid grid-cols-[2fr_1fr_20px_1fr_1fr_2fr] gap-2 items-center',
-                'px-5 py-2 border-b border-slate-100 hover:bg-slate-50',
+                'px-5 py-2 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50',
                 'text-sm transition-colors'
               )}
             >
@@ -197,10 +197,10 @@ export const MappingPanel = memo(function MappingPanel({
                 {node._meta.unmapped && (
                   <TriangleAlert size={12} className="text-yellow-500 flex-shrink-0" />
                 )}
-                <span className="font-mono text-xs text-slate-500 flex-shrink-0">
+                <span className="font-mono text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">
                   {node._meta.sourceType}
                 </span>
-                <span className="text-slate-400 text-xs truncate" title={node.label}>
+                <span className="text-slate-400 dark:text-slate-500 text-xs truncate" title={node.label}>
                   {node.label && node.label !== node._meta.sourceType
                     ? `"${node.label}"`
                     : ''}
@@ -210,7 +210,7 @@ export const MappingPanel = memo(function MappingPanel({
               {/* Canonical type override */}
               <select
                 className={cn(
-                  'text-xs px-2 py-1 rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-300',
+                  'text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-300',
                   TYPE_COLORS[node.type] ?? 'bg-slate-100 text-slate-700'
                 )}
                 value={node.type}
@@ -227,11 +227,11 @@ export const MappingPanel = memo(function MappingPanel({
               </select>
 
               {/* Arrow */}
-              <ArrowRight size={12} className="text-slate-300" />
+              <ArrowRight size={12} className="text-slate-300 dark:text-slate-600" />
 
               {/* Target type override */}
               <select
-                className="text-xs px-2 py-1 rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                className="text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-300"
                 value={derivedTarget}
                 onChange={(e) =>
                   onOverrideChange(node.id, {
@@ -250,7 +250,7 @@ export const MappingPanel = memo(function MappingPanel({
               </span>
 
               {/* Mapping rule / AI suggestion */}
-              <div className="text-xs text-slate-400 truncate flex items-center gap-1.5">
+              <div className="text-xs text-slate-400 dark:text-slate-500 truncate flex items-center gap-1.5">
                 {hasSuggestion && (
                   <button
                     onClick={() =>
@@ -275,8 +275,8 @@ export const MappingPanel = memo(function MappingPanel({
       </div>
 
       {/* Validations summary */}
-      <div className="px-5 py-2 border-t border-slate-200 bg-slate-50 flex-shrink-0">
-        <p className="text-[11px] text-slate-400">
+      <div className="px-5 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">
           <CheckCircle2 size={10} className="inline mr-1 text-green-500" />
           {flatNodes.filter((n) => !n.node._meta.unmapped).length} mapped •
           <TriangleAlert size={10} className="inline mx-1 text-yellow-500" />

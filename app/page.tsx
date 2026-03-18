@@ -11,7 +11,7 @@ export default function BuilderPage() {
   const appMode = useBuilderStore((s) => s.appMode);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-100">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
       <Toolbar />
       {appMode === 'builder' ? (
         <BuilderLayout />
