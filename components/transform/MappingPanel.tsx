@@ -7,8 +7,22 @@ import {
   TriangleAlert,
   CheckCircle2,
   ArrowRight,
+  Rows3,
+  Columns2,
+  Columns3,
+  LayoutGrid,
+  PanelTop,
+  MessageCircle,
+  Paperclip,
+  ListChecks,
+  Table,
+  ClipboardList,
+  FileText,
+  Frame,
+  Square,
+  AlignHorizontalSpaceAround,
 } from 'lucide-react';
-import type { CanonicalComponent } from '@/types/canonical';
+import type { CanonicalComponent, CanonicalCategory } from '@/types/canonical';
 import type { ComponentType } from '@/types';
 import type { MappingOverride, TargetFormat } from '@/services/schemaTransformer';
 import type { AIMappingSuggestion } from '@/services/aiService';
@@ -45,6 +59,7 @@ interface MappingPanelProps {
 const DEPTH_INDENT = 20;
 
 const TYPE_COLORS: Record<string, string> = {
+  // Field types
   Container: 'bg-blue-100 text-blue-700',
   TextField: 'bg-green-100 text-green-700',
   TextArea: 'bg-teal-100 text-teal-700',
@@ -54,7 +69,53 @@ const TYPE_COLORS: Record<string, string> = {
   Checkbox: 'bg-orange-100 text-orange-700',
   RadioGroup: 'bg-cyan-100 text-cyan-700',
   DatePicker: 'bg-rose-100 text-rose-700',
+  // Layout types
+  SingleColumn:    'bg-blue-50 text-blue-600',
+  TwoColumn:       'bg-indigo-100 text-indigo-700',
+  ThreeColumn:     'bg-violet-100 text-violet-700',
+  FourColumn:      'bg-purple-100 text-purple-600',
+  InlineLayout:    'bg-sky-100 text-sky-700',
+  TabsLayout:      'bg-cyan-100 text-cyan-700',
+  AccordionLayout: 'bg-teal-100 text-teal-600',
+  Section:         'bg-slate-100 text-slate-600',
+  // Widget types
+  PulseWidget:       'bg-emerald-100 text-emerald-700',
+  AttachmentsWidget: 'bg-amber-100 text-amber-700',
+  StepsWidget:       'bg-lime-100 text-lime-700',
+  DataGrid:          'bg-orange-100 text-orange-700',
+  CaseSummary:       'bg-red-100 text-red-700',
+  RichTextWidget:    'bg-fuchsia-100 text-fuchsia-700',
+  EmbeddedView:      'bg-cyan-100 text-cyan-600',
+  // Fallback
   Unknown: 'bg-slate-200 text-slate-600',
+};
+
+/** Category badge styles */
+const CATEGORY_COLORS: Record<CanonicalCategory, string> = {
+  field:   'bg-slate-100 text-slate-500 border border-slate-200',
+  layout:  'bg-blue-50  text-blue-600  border border-blue-200',
+  widget:  'bg-emerald-50 text-emerald-600 border border-emerald-200',
+};
+
+/** Widget/layout icon components keyed by canonical type */
+const TYPE_ICON: Record<string, React.ReactNode> = {
+  // Layouts
+  SingleColumn:    <Rows3 size={11} />,
+  TwoColumn:       <Columns2 size={11} />,
+  ThreeColumn:     <Columns3 size={11} />,
+  FourColumn:      <LayoutGrid size={11} />,
+  InlineLayout:    <AlignHorizontalSpaceAround size={11} />,
+  TabsLayout:      <PanelTop size={11} />,
+  AccordionLayout: <Square size={11} />,
+  Section:         <Square size={11} />,
+  // Widgets
+  PulseWidget:       <MessageCircle size={11} />,
+  AttachmentsWidget: <Paperclip size={11} />,
+  StepsWidget:       <ListChecks size={11} />,
+  DataGrid:          <Table size={11} />,
+  CaseSummary:       <ClipboardList size={11} />,
+  RichTextWidget:    <FileText size={11} />,
+  EmbeddedView:      <Frame size={11} />,
 };
 
 export const MappingPanel = memo(function MappingPanel({
@@ -180,23 +241,38 @@ export const MappingPanel = memo(function MappingPanel({
             (suggestion.suggestedCanonicalType !== node.type ||
               suggestion.suggestedTargetType !== derivedTarget);
 
+          const category: CanonicalCategory = node.category ?? 'field';
+          const isLayout = category === 'layout';
+          const isWidget = category === 'widget';
+          const typeIcon = TYPE_ICON[node.type];
+
           return (
             <div
               key={node.id}
               className={cn(
-                'grid grid-cols-[2fr_1fr_20px_1fr_1fr_2fr] gap-2 items-center',
+                'grid grid-cols-[2fr_1fr_20px_1fr_1fr_2fr] gap-2 items-start',
                 'px-5 py-2 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50',
-                'text-sm transition-colors'
+                'text-sm transition-colors',
+                isLayout && 'bg-blue-50/30 dark:bg-blue-950/20',
+                isWidget && 'bg-emerald-50/30 dark:bg-emerald-950/20'
               )}
             >
-              {/* Component label */}
+              {/* Component label + category badge */}
               <div
-                className="flex items-center gap-1.5 min-w-0"
+                className="flex flex-wrap items-center gap-1 min-w-0 pt-0.5"
                 style={{ paddingLeft: depth * DEPTH_INDENT }}
               >
                 {node._meta.unmapped && (
                   <TriangleAlert size={12} className="text-yellow-500 flex-shrink-0" />
                 )}
+                {/* Category badge */}
+                <span className={cn(
+                  'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0',
+                  CATEGORY_COLORS[category]
+                )}>
+                  {typeIcon}
+                  {category}
+                </span>
                 <span className="font-mono text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">
                   {node._meta.sourceType}
                 </span>
@@ -205,6 +281,20 @@ export const MappingPanel = memo(function MappingPanel({
                     ? `"${node.label}"`
                     : ''}
                 </span>
+                {/* Layout config badge */}
+                {isLayout && node.layoutConfig && (
+                  <span className="text-[10px] text-blue-500 bg-blue-50 border border-blue-100 rounded px-1 py-0.5 flex-shrink-0">
+                    {node.layoutConfig.columns
+                      ? `${node.layoutConfig.columns}col`
+                      : node.layoutConfig.layoutType ?? ''}
+                  </span>
+                )}
+                {/* Widget data source indicator */}
+                {isWidget && node.dataSource && (
+                  <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded px-1 py-0.5 flex-shrink-0">
+                    {node.dataSource.sourceClass ?? node.dataSource.property ?? 'data'}
+                  </span>
+                )}
               </div>
 
               {/* Canonical type override */}
@@ -227,7 +317,7 @@ export const MappingPanel = memo(function MappingPanel({
               </select>
 
               {/* Arrow */}
-              <ArrowRight size={12} className="text-slate-300 dark:text-slate-600" />
+              <ArrowRight size={12} className="text-slate-300 dark:text-slate-600 mt-1" />
 
               {/* Target type override */}
               <select
@@ -245,12 +335,12 @@ export const MappingPanel = memo(function MappingPanel({
               </select>
 
               {/* Binding */}
-              <span className="text-xs font-mono text-indigo-500 truncate">
+              <span className="text-xs font-mono text-indigo-500 truncate pt-0.5">
                 {node.bindings.field ? `.${node.bindings.field}` : ''}
               </span>
 
               {/* Mapping rule / AI suggestion */}
-              <div className="text-xs text-slate-400 dark:text-slate-500 truncate flex items-center gap-1.5">
+              <div className="text-xs text-slate-400 dark:text-slate-500 truncate flex items-start gap-1.5 pt-0.5">
                 {hasSuggestion && (
                   <button
                     onClick={() =>
@@ -280,8 +370,13 @@ export const MappingPanel = memo(function MappingPanel({
           <CheckCircle2 size={10} className="inline mr-1 text-green-500" />
           {flatNodes.filter((n) => !n.node._meta.unmapped).length} mapped •
           <TriangleAlert size={10} className="inline mx-1 text-yellow-500" />
-          {flatNodes.filter((n) => n.node._meta.unmapped).length} unmapped — click a row&apos;s
-          canonical type to override before generating.
+          {flatNodes.filter((n) => n.node._meta.unmapped).length} unmapped —
+          <span className="text-blue-500 ml-1">
+            {flatNodes.filter((n) => (n.node.category ?? 'field') === 'layout').length} layouts
+          </span>
+          <span className="text-emerald-500 ml-1">
+            {flatNodes.filter((n) => (n.node.category ?? 'field') === 'widget').length} widgets
+          </span>
         </p>
       </div>
     </div>

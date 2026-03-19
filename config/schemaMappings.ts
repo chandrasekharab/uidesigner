@@ -175,6 +175,157 @@ export const TYPE_MAPPINGS: TypeMapping[] = [
       { source: 'value', target: 'content', transform: labelVal },
     ],
   },
+
+  // ── Layout types ──────────────────────────────────────────────────────────
+  // These complement the Region handler in schemaTransformer — they exist here
+  // so lookups via PEGA_TYPE_MAP still resolve a canonical mapping entry.
+  {
+    pegaType: 'Region/stacked',
+    canonicalType: 'Container',    // aliased here; transformer promotes to SingleColumn
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Section') },
+    ],
+  },
+  {
+    pegaType: 'Region/twoColumn',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Two Column') },
+    ],
+  },
+  {
+    pegaType: 'Region/threeColumn',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Three Column') },
+    ],
+  },
+  {
+    pegaType: 'Region/fourColumn',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Four Column') },
+    ],
+  },
+  {
+    pegaType: 'Region/tabs',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Tabs') },
+    ],
+  },
+  {
+    pegaType: 'Region/accordion',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Accordion') },
+    ],
+  },
+  {
+    pegaType: 'Section',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name', target: 'label', transform: (v) => String(v ?? 'Section') },
+    ],
+  },
+
+  // ── Widget types ──────────────────────────────────────────────────────────
+  {
+    pegaType: 'pxPulse',
+    canonicalType: 'Unknown',   // transformer promotes to PulseWidget
+    targetType: 'Text',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'pxAttachContent',
+    canonicalType: 'Unknown',
+    targetType: 'Text',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'Attachments',
+    canonicalType: 'Unknown',
+    targetType: 'Text',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'pxProcessSteps',
+    canonicalType: 'Unknown',
+    targetType: 'Text',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'Step',
+    canonicalType: 'Unknown',
+    targetType: 'Text',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'DataGrid',
+    canonicalType: 'Unknown',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'SimpleTable',
+    canonicalType: 'Unknown',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'pxDynGridView',
+    canonicalType: 'Unknown',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'pxCaseSummary',
+    canonicalType: 'Unknown',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'CaseSummary',
+    canonicalType: 'Unknown',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'label', target: 'label', transform: labelVal },
+    ],
+  },
+  {
+    pegaType: 'EmbeddedView',
+    canonicalType: 'Container',
+    targetType: 'Container',
+    propMappings: [
+      { source: 'name',  target: 'label',     transform: (v) => String(v ?? 'Embedded View') },
+      { source: 'viewName', target: 'viewName' },
+    ],
+  },
 ];
 
 /** O(1) lookup by Pega type string */
@@ -192,6 +343,7 @@ for (const m of TYPE_MAPPINGS) {
 
 /** All canonical type strings (for override dropdowns) */
 export const ALL_CANONICAL_TYPES: CanonicalType[] = [
+  // Field types
   'Container',
   'TextField',
   'TextArea',
@@ -201,19 +353,55 @@ export const ALL_CANONICAL_TYPES: CanonicalType[] = [
   'Checkbox',
   'RadioGroup',
   'DatePicker',
+  // Layout types
+  'SingleColumn',
+  'TwoColumn',
+  'ThreeColumn',
+  'FourColumn',
+  'InlineLayout',
+  'TabsLayout',
+  'AccordionLayout',
+  'Section',
+  // Widget types
+  'PulseWidget',
+  'AttachmentsWidget',
+  'StepsWidget',
+  'DataGrid',
+  'CaseSummary',
+  'RichTextWidget',
+  'EmbeddedView',
+  // Fallback
   'Unknown',
 ];
 
 /** Map canonical type → default target type */
 export const CANONICAL_TO_TARGET: Record<CanonicalType, ComponentType> = {
-  Container: 'Container',
-  TextField: 'TextInput',
-  TextArea: 'TextInput',
-  Button: 'Button',
-  Dropdown: 'Dropdown',
-  Label: 'Text',
-  Checkbox: 'TextInput',
+  // Field types
+  Container:  'Container',
+  TextField:  'TextInput',
+  TextArea:   'TextInput',
+  Button:     'Button',
+  Dropdown:   'Dropdown',
+  Label:      'Text',
+  Checkbox:   'TextInput',
   RadioGroup: 'Dropdown',
   DatePicker: 'TextInput',
-  Unknown: 'Text',
+  Unknown:    'Text',
+  // Layout types — all map to Container for native canvas
+  SingleColumn:    'Container',
+  TwoColumn:       'Container',
+  ThreeColumn:     'Container',
+  FourColumn:      'Container',
+  InlineLayout:    'Container',
+  TabsLayout:      'Container',
+  AccordionLayout: 'Container',
+  Section:         'Container',
+  // Widget types — map to closest native type for canvas preview
+  PulseWidget:       'Text',
+  AttachmentsWidget: 'Text',
+  StepsWidget:       'Text',
+  DataGrid:          'Container',
+  CaseSummary:       'Container',
+  RichTextWidget:    'Text',
+  EmbeddedView:      'Container',
 };

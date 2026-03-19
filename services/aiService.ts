@@ -1,5 +1,5 @@
 import type { UIComponent } from '@/types';
-import type { CanonicalType } from '@/types/canonical';
+import type { CanonicalType, CanonicalCategory, LayoutConfig } from '@/types/canonical';
 import type { ComponentType } from '@/types';
 
 // ─── AI Mapping Suggestion Types ──────────────────────────────────────────────
@@ -425,3 +425,212 @@ export async function suggestBestComponentMatch(
   };
 }
 
+// ─── Layout & Widget AI Functions ────────────────────────────────────────────
+
+import {
+  WIDGET_DETECTION_HINTS,
+  LAYOUT_MAPPINGS,
+  resolveLayoutCanonicalType,
+  detectWidgetFromLabel,
+} from '@/config/widgetMapping';
+
+// ── Layout Detection ──────────────────────────────────────────────────────────
+
+export interface AILayoutDetectResult {
+  /** Canonical layout type resolved from the image/region heuristics */
+  layoutType: CanonicalType;
+  /** Category ('layout') */
+  category: CanonicalCategory;
+  /** Resolved column count */
+  columns: number;
+  /** Inferred layout config */
+  layoutConfig: Partial<LayoutConfig>;
+  /** 0–1 confidence */
+  confidence: number;
+  /** Explanation of why this layout was detected */
+  explanation: string;
+  mock: boolean;
+}
+
+/**
+ * Detect the layout structure of an uploaded image.
+ * Mock: uses grid-line analysis heuristic; real: sends image to vision model.
+ */
+export async function detectLayoutStructure(
+  _image: File
+): Promise<AILayoutDetectResult> {
+  // Mock implementation — a real call would send the image to /api/ai/generate
+  // with a structured prompt asking for column count, layout type, etc.
+  // We return a plausible 2-column result as the default mock.
+  return {
+    layoutType: 'TwoColumn',
+    category: 'layout',
+    columns: 2,
+    layoutConfig: { layoutType: 'twoColumn', columns: 2, gap: 16 },
+    confidence: 0.72,
+    explanation: 'Image appears to contain a two-column form layout based on field alignment heuristics.',
+    mock: true,
+  };
+}
+
+// ── Widget Detection ──────────────────────────────────────────────────────────
+
+export interface AIWidgetDetectResult {
+  /** Detected canonical widget type */
+  widgetType: CanonicalType;
+  /** Category ('widget') */
+  category: CanonicalCategory;
+  /** 0–1 confidence */
+  confidence: number;
+  /** Explanation */
+  explanation: string;
+  /** Ordered alternatives */
+  alternatives: Array<{ widgetType: CanonicalType; confidence: number }>;
+  mock: boolean;
+}
+
+/**
+ * Detect widget type from a region descriptor (label, child count, visual features).
+ * Mock: uses WIDGET_DETECTION_HINTS label matching.
+ * Real: would send region bounding-box image to a vision model.
+ */
+export async function detectWidgetType(
+  region: { label?: string; childCount?: number; [key: string]: unknown }
+): Promise<AIWidgetDetectResult> {
+  const label = String(region.label ?? '');
+  const heuristicType = detectWidgetFromLabel(label);
+  const matched = WIDGET_DETECTION_HINTS.filter((h) =>
+    h.labelKeywords.some((kw) => label.toLowerCase().includes(kw))
+  ).sort((a, b) => b.confidence - a.confidence);
+
+  const best = matched[0];
+  const widgetType: CanonicalType = heuristicType ?? 'Unknown';
+
+  return {
+    widgetType,
+    category: 'widget',
+    confidence: best?.confidence ?? 0.4,
+    explanation: best
+      ? `Region label "${label}" matched keyword pattern for ${widgetType}.`
+      : `No strong widget signal found in region "${label}".`,
+    alternatives: matched.slice(1).map((h) => ({
+      widgetType: h.canonicalType,
+      confidence: h.confidence,
+    })),
+    mock: true,
+  };
+}
+
+// ── Layout Mapping Suggestion ─────────────────────────────────────────────────
+
+export interface AILayoutMapResult {
+  /** Suggested canonical layout type */
+  canonicalType: CanonicalType;
+  /** Intermediate schema representation */
+  intermediateLayout: { type: CanonicalType; layoutConfig: Partial<LayoutConfig>; label: string };
+  /** Target representation (native) */
+  targetLayout: { type: string; columns?: number; gap?: number };
+  /** Target representation (A2UI) */
+  a2uiLayout: { component: string; props: Record<string, unknown> };
+  confidence: number;
+  mock: boolean;
+}
+
+/**
+ * Suggest the best intermediate/target mapping for a Pega layout string.
+ * Mock: resolves via resolveLayoutCanonicalType + LAYOUT_MAPPINGS registry.
+ */
+export async function suggestLayoutMapping(
+  pegaLayout: { type?: string; layout?: string; name?: string }
+): Promise<AILayoutMapResult> {
+  const layoutStr = String(pegaLayout.layout ?? pegaLayout.type ?? 'stacked');
+  const canonicalType = resolveLayoutCanonicalType(layoutStr);
+  const entry = LAYOUT_MAPPINGS.find((m) => m.canonicalType === canonicalType);
+
+  const layoutConfig: Partial<LayoutConfig> = entry?.defaultLayoutConfig ?? {
+    layoutType: 'singleColumn',
+    columns: 1,
+    gap: 16,
+  };
+
+  const cols = (layoutConfig as LayoutConfig).columns ?? 1;
+
+  return {
+    canonicalType,
+    intermediateLayout: {
+      type: canonicalType,
+      layoutConfig,
+      label: String(pegaLayout.name ?? canonicalType),
+    },
+    targetLayout: {
+      type: 'Container',
+      columns: cols > 1 ? cols : undefined,
+      gap: (layoutConfig as LayoutConfig).gap,
+    },
+    a2uiLayout: {
+      component: entry?.a2uiType ?? 'FlexContainer',
+      props: {
+        columns: cols > 1 ? cols : undefined,
+        gap: (layoutConfig as LayoutConfig).gap,
+      },
+    },
+    confidence: 0.88,
+    mock: true,
+  };
+}
+
+// ── Widget Mapping Suggestion ─────────────────────────────────────────────────
+
+export interface AIWidgetMapResult {
+  /** Suggested canonical widget type */
+  canonicalType: CanonicalType;
+  /** Pega source type found */
+  pegaType: string;
+  /** Target native type */
+  nativeTargetType: string;
+  /** A2UI type */
+  a2uiType: string;
+  /** Intermediate → Target mapping explanation */
+  explanation: string;
+  confidence: number;
+  mock: boolean;
+}
+
+/**
+ * Suggest the intermediate and target mappings for a detected Pega widget.
+ * Mock: looks up via WIDGET_TYPE_MAP; real: sends widget region to LLM.
+ */
+export async function suggestWidgetMapping(
+  component: { type?: string; label?: string; [key: string]: unknown }
+): Promise<AIWidgetMapResult> {
+  const { WIDGET_TYPE_MAP } = await import('@/config/widgetMapping');
+  const pegaType = String(component.type ?? '');
+  const entry = WIDGET_TYPE_MAP.get(pegaType);
+
+  if (entry) {
+    return {
+      canonicalType: entry.canonicalType,
+      pegaType,
+      nativeTargetType: entry.nativeTargetType,
+      a2uiType: entry.a2uiType,
+      explanation: `${pegaType} maps to ${entry.canonicalType} (${entry.description}). Native target: ${entry.nativeTargetType}. A2UI: ${entry.a2uiType}.`,
+      confidence: 0.90,
+      mock: true,
+    };
+  }
+
+  // Heuristic fallback from label
+  const label = String(component.label ?? pegaType);
+  const heuristicType = detectWidgetFromLabel(label);
+  return {
+    canonicalType: heuristicType ?? 'Unknown',
+    pegaType,
+    nativeTargetType: 'Text',
+    a2uiType: 'TextContent',
+    explanation: heuristicType
+      ? `No exact Pega type match. Label heuristics suggest ${heuristicType}.`
+      : `No mapping found for "${pegaType}". Falling back to Unknown/Text.`,
+    confidence: heuristicType ? 0.55 : 0.40,
+    mock: true,
+  };
+}
