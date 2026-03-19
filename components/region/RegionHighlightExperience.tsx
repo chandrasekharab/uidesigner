@@ -39,11 +39,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Region, RegionBoundingBox, RegionMappedSchema, RegionAnalysisResult } from '@/types/region';
-import { RegionCanvas }       from '@/components/region/RegionCanvas';
-import { RegionList }         from '@/components/region/RegionList';
-import { RegionEditor }       from '@/components/region/RegionEditor';
-import { RegionMappingPanel } from '@/components/region/RegionMappingPanel';
-import { analyseRegions }     from '@/services/aiService';
+import { RegionCanvas }          from '@/components/region/RegionCanvas';
+import { RegionList }            from '@/components/region/RegionList';
+import { RegionEditor }          from '@/components/region/RegionEditor';
+import { RegionMappingPanel }    from '@/components/region/RegionMappingPanel';
+import { WidgetExtractionPanel } from '@/components/region/WidgetExtractionPanel';
+import { analyseRegions }        from '@/services/aiService';
+import {
+  detectRedBorderedWidgets,
+  type DetectedWidget,
+} from '@/utils/redBorderDetector';
 import {
   SAMPLE_REGIONS,
   REGION_COLORS,
@@ -122,7 +127,9 @@ const UploadStep = memo(function UploadStep({ onImageReady, onUseSample }: Uploa
           Upload a Design Screenshot
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-          Upload any UI screenshot (PNG, JPG, SVG). You will then draw regions on it and map each region to a Pega schema component.
+          Upload a UI screenshot (PNG, JPG, SVG). If you draw{' '}
+          <span className="font-semibold text-red-500">red rectangles</span> around widgets,
+          they will be auto-detected and extracted as JSON. Otherwise, draw regions manually.
         </p>
 
         {/* Drop zone */}
@@ -454,22 +461,58 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
   const [analysisResults,  setAnalysisResults]  = useState<RegionAnalysisResult[]>([]);
   const [autoDetect,       setAutoDetect]       = useState(false);
 
-  // ── Image upload ────────────────────────────────────────────────────────────
-  const handleImageReady = useCallback((url: string, name: string) => {
+  // ── Red-border extraction ────────────────────────────────────────────────
+  type Step1View = 'detecting' | 'extraction' | 'draw';
+  const [step1View,        setStep1View]        = useState<Step1View>('draw');
+  const [extractedWidgets, setExtractedWidgets] = useState<DetectedWidget[]>([]);
+  const [extractedMeta,    setExtractedMeta]    = useState<{ width: number; height: number } | null>(null);
+
+  // ── Image upload ──────────────────────────────────────────────────────────
+  const handleImageReady = useCallback(async (url: string, name: string) => {
     setImageUrl(url);
     setImageFileName(name);
     setRegions([]);
     setSelectedId(null);
     setAnalysisResults([]);
+    setExtractedWidgets([]);
+    setExtractedMeta(null);
     setStep(1);
-    showToast('success', `Loaded: ${name}`);
+    setStep1View('detecting');
+
+    try {
+      const result = await detectRedBorderedWidgets(url);
+      setExtractedWidgets(result.widgets);
+      setExtractedMeta({ width: result.imageWidth, height: result.imageHeight });
+
+      if (result.widgets.length > 0) {
+        // Pre-populate regions from detected widget bounding boxes
+        const newRegions: Region[] = result.widgets.map((w, i) => ({
+          id:           w.id,
+          name:         w.name,
+          boundingBox:  w.normalizedBounds,
+          imageSegment: w.imageSegment,
+          color:        regionColor(i),
+          detectedType: undefined,
+          mappedSchema: undefined,
+        }));
+        setRegions(newRegions);
+        setSelectedId(newRegions[0]?.id ?? null);
+        setStep1View('extraction');
+        showToast('success', `Detected ${result.widgets.length} widget${result.widgets.length !== 1 ? 's' : ''} from red borders`);
+      } else {
+        setStep1View('draw');
+        showToast('info', 'No red borders found — draw regions manually');
+      }
+    } catch {
+      setStep1View('draw');
+      showToast('info', `Loaded: ${name}`);
+    }
   }, [showToast]);
 
   const handleUseSample = useCallback(() => {
     const url = getMockDesignDataUrl();
     setImageUrl(url);
     setImageFileName('pega-case-management-sample.svg');
-    // Populate with pre-defined sample regions (no image segments yet)
     const populated: Region[] = SAMPLE_REGIONS.map((r, i) => ({
       ...r,
       imageSegment: '',
@@ -478,6 +521,9 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
     setRegions(populated);
     setSelectedId(populated[0]?.id ?? null);
     setAnalysisResults([]);
+    setExtractedWidgets([]);
+    setExtractedMeta(null);
+    setStep1View('draw');
     setStep(1);
     showToast('info', 'Sample design loaded with pre-defined regions.');
   }, [showToast]);
@@ -582,6 +628,9 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
     setRegions([]);
     setSelectedId(null);
     setAnalysisResults([]);
+    setExtractedWidgets([]);
+    setExtractedMeta(null);
+    setStep1View('draw');
   }, []);
 
   const selectedRegion = regions.find((r) => r.id === selectedId) ?? null;
@@ -627,6 +676,16 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
           <span className="text-xs text-slate-400 font-mono truncate max-w-40">{imageFileName}</span>
         )}
 
+        {/* Show "view extractions" button when we have results but are in draw mode */}
+        {step === 1 && step1View === 'draw' && extractedWidgets.length > 0 && (
+          <button
+            onClick={() => setStep1View('extraction')}
+            className="ml-1 flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 transition-colors"
+          >
+            <CheckCircle2 size={11} /> View {extractedWidgets.length} extracted widget{extractedWidgets.length !== 1 ? 's' : ''}
+          </button>
+        )}
+
         {imageUrl && (
           <button
             onClick={handleReset}
@@ -644,8 +703,34 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
           <UploadStep onImageReady={handleImageReady} onUseSample={handleUseSample} />
         )}
 
-        {/* Step 1 — Draw regions */}
+        {/* Step 1 — Red-border detection → extraction results → manual draw */}
         {step === 1 && imageUrl && (
+          <>
+
+          {/* 1a — Detecting */}
+          {step1View === 'detecting' && (
+            <div className="flex flex-col items-center justify-center h-full gap-3 bg-white dark:bg-slate-900">
+              <Loader2 size={30} className="animate-spin text-indigo-500" />
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Scanning for red-bordered widgets…
+              </p>
+              <p className="text-xs text-slate-400">Analysing pixel data — this takes a moment for large images.</p>
+            </div>
+          )}
+
+          {/* 1b — Extraction results */}
+          {step1View === 'extraction' && extractedMeta && (
+            <WidgetExtractionPanel
+              widgets={extractedWidgets}
+              imageWidth={extractedMeta.width}
+              imageHeight={extractedMeta.height}
+              fileName={imageFileName}
+              onContinue={() => setStep1View('draw')}
+            />
+          )}
+
+          {/* 1c — Manual draw interface */}
+          {step1View === 'draw' && (
           <div className="flex h-full overflow-hidden">
             {/* Region list (left panel) */}
             <div className="w-56 shrink-0 border-r border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
@@ -716,6 +801,8 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
               )}
             </div>
           </div>
+          )}
+          </>
         )}
 
         {/* Step 2 — Analyse */}
