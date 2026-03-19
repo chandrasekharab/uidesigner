@@ -380,3 +380,151 @@ function groupComponentsIntoSections(
 
   return sections;
 }
+
+// ─── Region-Level Parsing ─────────────────────────────────────────────────────
+
+import type { Region } from '@/types/region';
+
+export interface RegionParseResult {
+  regionId: string;
+  /** Which general visual type was inferred */
+  inferredScreenType: ParsedDesign['screenType'];
+  /** Components detected inside this region */
+  components: DetectedComponent[];
+  /** Layout sections within this region */
+  layout: LayoutSection[];
+  /** Extracted OCR lines (mock: based on detected component labels) */
+  ocrLines: string[];
+  mock: boolean;
+}
+
+/**
+ * Parse a single Region independently.
+ * Uses the region's `imageSegment` (base64 data-URL) and `name` to produce a
+ * localised ParsedDesign-like result that feeds into the mapping panel.
+ *
+ * Real implementation: send the cropped image to /api/ai/parse-design.
+ * Mock: deterministic components inferred from the region's detected type.
+ */
+export async function parseRegion(region: Region): Promise<RegionParseResult> {
+  await delay(300 + Math.random() * 200);
+
+  const type = region.detectedType ?? 'Unknown';
+
+  const componentMap: Record<string, DetectedComponent[]> = {
+    Header: [
+      mockComp('heading', region.name,           0.02, 0.15, 0.6,  0.5),
+      mockComp('button',  'Submit',              0.85, 0.2,  0.13, 0.55, { attributes: { variant: 'primary' } }),
+    ],
+    CaseSummary: [
+      mockComp('label', 'Case ID',               0.02, 0.1,  0.2,  0.35),
+      mockComp('text',  'CLM-1042',              0.22, 0.1,  0.2,  0.35),
+      mockComp('label', 'Status',                0.5,  0.1,  0.15, 0.35),
+      mockComp('text',  'Open',                  0.65, 0.1,  0.15, 0.35),
+      mockComp('label', 'Priority',              0.02, 0.6,  0.2,  0.3),
+      mockComp('text',  'High',                  0.22, 0.6,  0.2,  0.3),
+    ],
+    Steps: [
+      mockComp('text', 'Filed',      0.05, 0.3, 0.12, 0.5),
+      mockComp('text', 'Review',     0.25, 0.3, 0.12, 0.5),
+      mockComp('text', 'Assessment', 0.45, 0.3, 0.14, 0.5),
+      mockComp('text', 'Approval',   0.65, 0.3, 0.12, 0.5),
+      mockComp('text', 'Closed',     0.85, 0.3, 0.1,  0.5),
+    ],
+    FormSection: [
+      mockComp('label', 'First Name', 0.02, 0.1,  0.3,  0.12),
+      mockComp('input', 'First Name', 0.02, 0.22, 0.46, 0.15, { placeholder: 'Enter first name' }),
+      mockComp('label', 'Last Name',  0.54, 0.1,  0.3,  0.12),
+      mockComp('input', 'Last Name',  0.54, 0.22, 0.44, 0.15, { placeholder: 'Enter last name' }),
+      mockComp('label', 'Email',      0.02, 0.42, 0.3,  0.12),
+      mockComp('input', 'Email',      0.02, 0.54, 0.46, 0.15, { placeholder: 'Enter email', attributes: { inputType: 'email' } }),
+      mockComp('label', 'Phone',      0.54, 0.42, 0.3,  0.12),
+      mockComp('input', 'Phone',      0.54, 0.54, 0.44, 0.15, { placeholder: 'Enter phone' }),
+    ],
+    Attachments: [
+      mockComp('text',   '3 attachments',       0.05, 0.15, 0.5, 0.2),
+      mockComp('button', 'Upload',              0.75, 0.1,  0.2, 0.25, { attributes: { variant: 'secondary' } }),
+      mockComp('card',   'accident_photo.jpg',  0.04, 0.38, 0.92, 0.18),
+      mockComp('card',   'police_report.pdf',   0.04, 0.58, 0.92, 0.18),
+      mockComp('card',   'insurance_card.pdf',  0.04, 0.78, 0.92, 0.18),
+    ],
+    ActivityFeed: [
+      mockComp('text',    'Sarah Johnson',     0.15, 0.1,  0.5, 0.1),
+      mockComp('text',    'Case assigned',     0.15, 0.2,  0.6, 0.08),
+      mockComp('text',    'John Smith',        0.15, 0.35, 0.5, 0.1),
+      mockComp('text',    'Submitted docs',    0.15, 0.45, 0.6, 0.08),
+      mockComp('input',   'Add a comment',     0.03, 0.82, 0.8, 0.12, { placeholder: 'Add a comment...' }),
+      mockComp('button',  'Send',              0.85, 0.82, 0.12, 0.12, { attributes: { variant: 'primary' } }),
+    ],
+  };
+
+  const screenTypeMap: Partial<Record<string, ParsedDesign['screenType']>> = {
+    Header:       'detail',
+    CaseSummary:  'detail',
+    Steps:        'detail',
+    FormSection:  'form',
+    Attachments:  'detail',
+    ActivityFeed: 'detail',
+    DataGrid:     'list',
+    Tabs:         'detail',
+    Navigation:   'detail',
+    Modal:        'modal',
+  };
+
+  const components = componentMap[type] ?? [
+    mockComp('container', region.name, 0, 0, 1, 1),
+  ];
+
+  const inferredScreenType: ParsedDesign['screenType'] =
+    (screenTypeMap[type] as ParsedDesign['screenType']) ?? 'unknown';
+
+  const layout = buildRegionLayout(components);
+  const ocrLines = components.map((c) => c.label).filter(Boolean);
+
+  return { regionId: region.id, inferredScreenType, components, layout, ocrLines, mock: true };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function mockComp(
+  type: DetectedComponentType,
+  label: string,
+  x: number, y: number, w: number, h: number,
+  extra: Partial<DetectedComponent> = {}
+): DetectedComponent {
+  return {
+    id:          uid('rcomp'),
+    type,
+    label,
+    confidence:  0.85 + Math.random() * 0.12,
+    boundingBox: { x, y, width: w, height: h },
+    children:    [],
+    attributes:  {},
+    ...extra,
+  };
+}
+
+function buildRegionLayout(components: DetectedComponent[]): LayoutSection[] {
+  const ROW_GAP = 0.12;
+  const sorted = [...components].sort((a, b) => a.boundingBox.y - b.boundingBox.y);
+  const rows: DetectedComponent[][] = [];
+
+  for (const comp of sorted) {
+    const last = rows[rows.length - 1];
+    if (last && Math.abs(comp.boundingBox.y - last[0].boundingBox.y) < ROW_GAP) {
+      last.push(comp);
+    } else {
+      rows.push([comp]);
+    }
+  }
+
+  return rows.flatMap((row, rIdx) =>
+    row.map((comp, cIdx) => ({
+      id:           uid('rsect'),
+      label:        comp.label || `Row ${rIdx + 1}`,
+      row:          rIdx,
+      column:       cIdx,
+      componentIds: [comp.id],
+    }))
+  );
+}

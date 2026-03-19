@@ -25,6 +25,7 @@ import {
   Sun,
   ScanLine,
   ShieldCheck,
+  MapPin,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -203,6 +204,17 @@ export const Toolbar = memo(function Toolbar() {
         >
           <ShieldCheck size={12} /> Schema
         </button>
+        <button
+          onClick={() => setAppMode('region-map')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'region-map'
+              ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          )}
+        >
+          <MapPin size={12} /> Regions
+        </button>
       </div>
 
       {/* Builder-only controls */}
@@ -261,6 +273,13 @@ export const Toolbar = memo(function Toolbar() {
         <span className="text-xs text-violet-700 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 px-2 py-1 rounded-md">
           <ScanLine size={12} />
           Design-to-Pega Generator
+        </span>
+      )}
+
+      {appMode === 'region-map' && (
+        <span className="text-xs text-teal-700 dark:text-teal-300 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-teal-50 dark:bg-teal-900/20 px-2 py-1 rounded-md">
+          <MapPin size={12} />
+          Highlight &amp; Map Regions
         </span>
       )}
 

@@ -634,3 +634,150 @@ export async function suggestWidgetMapping(
     mock: true,
   };
 }
+
+// ─── Region AI Functions ──────────────────────────────────────────────────────
+// These functions extend the AI service for the "Highlight & Map Regions" flow.
+// All ship with full mock implementations; swap for real Vision/LLM calls by
+// setting NEXT_PUBLIC_AI_API_KEY and replacing the mock bodies.
+
+import type {
+  RegionDetectedType,
+  RegionMappedSchema,
+  RegionAnalysisResult,
+  Region,
+} from '@/types/region';
+
+export interface RegionSuggestion {
+  name: string;
+  boundingBox: { x: number; y: number; width: number; height: number };
+  detectedType: RegionDetectedType;
+  confidence: number;
+}
+
+export interface SuggestRegionsResult {
+  suggestions: RegionSuggestion[];
+  mock: boolean;
+}
+
+/**
+ * Auto-detect likely UI regions from a full-page design image.
+ * Real implementation: calls a Vision LLM to segment the image.
+ * Mock: returns region suggestions matching the sample SVG layout.
+ */
+export async function suggestRegions(
+  _imageBase64: string
+): Promise<SuggestRegionsResult> {
+  // Simulate analysis delay
+  await new Promise((r) => setTimeout(r, 900));
+
+  const suggestions: RegionSuggestion[] = [
+    { name: 'Header',           boundingBox: { x: 0,     y: 0,     width: 1,     height: 0.08  }, detectedType: 'Header',       confidence: 0.96 },
+    { name: 'Case Summary',     boundingBox: { x: 0,     y: 0.08,  width: 1,     height: 0.074 }, detectedType: 'CaseSummary',  confidence: 0.91 },
+    { name: 'Process Steps',    boundingBox: { x: 0,     y: 0.154, width: 1,     height: 0.08  }, detectedType: 'Steps',        confidence: 0.94 },
+    { name: 'Claimant Details', boundingBox: { x: 0,     y: 0.234, width: 0.645, height: 0.28  }, detectedType: 'FormSection',  confidence: 0.89 },
+    { name: 'Incident Details', boundingBox: { x: 0,     y: 0.514, width: 0.645, height: 0.212 }, detectedType: 'FormSection',  confidence: 0.87 },
+    { name: 'Attachments',      boundingBox: { x: 0.645, y: 0.234, width: 0.355, height: 0.263 }, detectedType: 'Attachments',  confidence: 0.93 },
+    { name: 'Activity Feed',    boundingBox: { x: 0.645, y: 0.497, width: 0.355, height: 0.354 }, detectedType: 'ActivityFeed', confidence: 0.90 },
+  ];
+
+  return { suggestions, mock: true };
+}
+
+/**
+ * Classify the visual type of an already-cropped region image.
+ * Real: sends cropped image to a Vision classifier.
+ * Mock: keyword-heuristic on the region name.
+ */
+export async function detectRegionType(
+  _regionImageBase64: string,
+  regionName: string
+): Promise<{ type: RegionDetectedType; confidence: number; reason: string; mock: boolean }> {
+  await new Promise((r) => setTimeout(r, 400));
+
+  const name = regionName.toLowerCase();
+  const rules: Array<[RegExp, RegionDetectedType, string]> = [
+    [/header|title|banner/,           'Header',       'Contains title/banner visual elements'],
+    [/attach|file|document|upload/,   'Attachments',  'Shows file listing or upload controls'],
+    [/pulse|activity|feed|comment/,   'ActivityFeed', 'Contains threaded messages or activity log'],
+    [/step|stage|progress|stepper/,   'Steps',        'Shows a sequential progress indicator'],
+    [/grid|table|list|row/,           'DataGrid',     'Contains tabular or list structure'],
+    [/summary|case.*info|overview/,   'CaseSummary',  'Displays case metadata summary'],
+    [/tab|panel/,                     'Tabs',         'Contains tab navigation elements'],
+    [/nav|menu|sidebar/,              'Navigation',   'Contains navigation controls'],
+    [/form|field|input|detail/,       'FormSection',  'Contains form input fields'],
+    [/footer|action.*bar|button.*bar/, 'Footer',      'Contains action buttons at the bottom'],
+    [/card|tile/,                     'Card',         'Card-style component container'],
+    [/modal|dialog|popup/,            'Modal',        'Overlay or dialog component'],
+  ];
+
+  for (const [pattern, type, reason] of rules) {
+    if (pattern.test(name)) {
+      return { type, confidence: 0.82 + Math.random() * 0.14, reason, mock: true };
+    }
+  }
+
+  return { type: 'Unknown', confidence: 0.40, reason: 'No matching visual pattern detected', mock: true };
+}
+
+/**
+ * Suggest an intermediate schema mapping for a region, based on its detected type.
+ * Real: sends region metadata and cropped image to an LLM for grounded suggestions.
+ * Mock: lookup table keyed by RegionDetectedType.
+ */
+export async function suggestRegionSchemaMapping(
+  region: Pick<Region, 'name' | 'detectedType'>
+): Promise<{ mapping: RegionMappedSchema; confidence: number; reason: string; mock: boolean }> {
+  await new Promise((r) => setTimeout(r, 350));
+
+  const mappings: Record<string, RegionMappedSchema> = {
+    Header:       { category: 'widget',     canonicalType: 'CaseSummary',       pegaType: 'pxCaseSummary',   label: 'Case Header'       },
+    CaseSummary:  { category: 'widget',     canonicalType: 'CaseSummary',       pegaType: 'pxCaseSummary',   label: 'Case Summary'      },
+    Steps:        { category: 'widget',     canonicalType: 'StepsWidget',       pegaType: 'pxProcessSteps',  label: 'Process Steps'     },
+    FormSection:  { category: 'fieldGroup', canonicalType: 'TwoColumn',         pegaType: 'region',          label: region.name, config: { columns: 2 } },
+    Attachments:  { category: 'widget',     canonicalType: 'AttachmentsWidget', pegaType: 'pxAttachContent', label: 'Attachments'       },
+    ActivityFeed: { category: 'widget',     canonicalType: 'PulseWidget',       pegaType: 'pxPulse',         label: 'Activity Feed'     },
+    DataGrid:     { category: 'widget',     canonicalType: 'DataGrid',          pegaType: 'DataGrid',        label: 'Data Grid'         },
+    Navigation:   { category: 'layout',     canonicalType: 'Section',           pegaType: 'region',          label: 'Navigation'        },
+    Footer:       { category: 'layout',     canonicalType: 'InlineLayout',      pegaType: 'region',          label: 'Footer Actions'    },
+    Card:         { category: 'layout',     canonicalType: 'Section',           pegaType: 'region',          label: 'Card'              },
+    Tabs:         { category: 'layout',     canonicalType: 'TabsLayout',        pegaType: 'region',          label: 'Tabs'              },
+    Modal:        { category: 'layout',     canonicalType: 'Section',           pegaType: 'region',          label: 'Modal'             },
+    Unknown:      { category: 'layout',     canonicalType: 'SingleColumn',      pegaType: 'region',          label: region.name         },
+  };
+
+  const key = region.detectedType ?? 'Unknown';
+  const mapping = mappings[key] ?? mappings['Unknown'];
+  return {
+    mapping,
+    confidence: key === 'Unknown' ? 0.45 : 0.84,
+    reason: key === 'Unknown'
+      ? 'Unknown region type — defaulting to single-column layout.'
+      : `Detected as "${key}" — mapped to ${mapping.canonicalType} (${mapping.pegaType}).`,
+    mock: true,
+  };
+}
+
+/**
+ * Analyse all regions in batch, returning a full analysis result per region.
+ */
+export async function analyseRegions(
+  regions: Array<Pick<Region, 'id' | 'name' | 'detectedType' | 'imageSegment'>>
+): Promise<RegionAnalysisResult[]> {
+  const results: RegionAnalysisResult[] = [];
+  for (const region of regions) {
+    const typeResult = await detectRegionType(region.imageSegment, region.name);
+    const mapResult  = await suggestRegionSchemaMapping({
+      name: region.name,
+      detectedType: typeResult.type,
+    });
+    results.push({
+      regionId:         region.id,
+      detectedType:     typeResult.type,
+      confidence:       (typeResult.confidence + mapResult.confidence) / 2,
+      suggestedMapping: mapResult.mapping,
+      reason:           `${typeResult.reason} → ${mapResult.reason}`,
+      mock:             true,
+    });
+  }
+  return results;
+}

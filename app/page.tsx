@@ -7,6 +7,7 @@ import { TransformationStudio } from '@/components/transform/TransformationStudi
 import { RendererExperience } from '@/components/renderer/RendererExperience';
 import { DesignGeneratorExperience } from '@/components/design/DesignGeneratorExperience';
 import { SchemaAwareExperience } from '@/components/design/SchemaAwareExperience';
+import { RegionHighlightExperience } from '@/components/region/RegionHighlightExperience';
 import { useBuilderStore } from '@/store/builderStore';
 
 export default function BuilderPage() {
@@ -23,6 +24,8 @@ export default function BuilderPage() {
         <DesignGeneratorExperience />
       ) : appMode === 'schema-design' ? (
         <SchemaAwareExperience />
+      ) : appMode === 'region-map' ? (
+        <RegionHighlightExperience />
       ) : (
         <RendererExperience />
       )}

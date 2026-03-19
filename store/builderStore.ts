@@ -38,8 +38,8 @@ interface BuilderStore {
   togglePreview: () => void;
 
   // App mode
-  appMode: 'builder' | 'transform' | 'renderer' | 'design' | 'schema-design';
-  setAppMode: (mode: 'builder' | 'transform' | 'renderer' | 'design' | 'schema-design') => void;
+  appMode: 'builder' | 'transform' | 'renderer' | 'design' | 'schema-design' | 'region-map';
+  setAppMode: (mode: 'builder' | 'transform' | 'renderer' | 'design' | 'schema-design' | 'region-map') => void;
 
   // Theme
   theme: 'light' | 'dark';
@@ -259,7 +259,7 @@ export const useBuilderStore = create<BuilderStore>()(
       }),
 
     // ── App mode ───────────────────────────────────────────────────────────
-    appMode: 'builder' as 'builder' | 'transform' | 'renderer' | 'design' | 'schema-design',
+    appMode: 'builder' as 'builder' | 'transform' | 'renderer' | 'design' | 'schema-design' | 'region-map',
     setAppMode: (mode) =>
       set((s) => {
         s.appMode = mode;
