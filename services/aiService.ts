@@ -781,3 +781,193 @@ export async function analyseRegions(
   }
   return results;
 }
+
+// ─── Template Mapping Studio AI Functions ─────────────────────────────────────
+// Extend the AI layer with region-mapping-specific capabilities.
+// All functions ship with full mock implementations — swap real calls by
+// setting NEXT_PUBLIC_AI_API_KEY and pointing to a backend endpoint.
+
+import type { RegionMappingSuggestion, MappingType } from '@/models/RegionMapping';
+
+export interface AISuggestRegionMappingsResult {
+  suggestions: RegionMappingSuggestion[];
+  autoMappedCount: number;
+  unmatchedSourceIds: string[];
+  mock: boolean;
+}
+
+/**
+ * Suggest region mappings between source template regions and user-defined target regions.
+ *
+ * Strategy (mock): score each (source, target) pair by name similarity and
+ * RegionDetectedType ↔ TargetLayoutType affinity. Return the highest-scoring
+ * non-conflicting assignment as a greedy match.
+ *
+ * Real implementation: call a VectorDB or LLM with region descriptions.
+ *
+ * @param sourceRegions - Source template regions (PegaTemplateRegion shape)
+ * @param targetRegions - User-defined target layout regions
+ */
+export async function suggestRegionMappings(
+  sourceRegions: Array<{ id: string; name: string; type: string; description?: string }>,
+  targetRegions: Array<{ id: string; name: string; layout?: string }>
+): Promise<AISuggestRegionMappingsResult> {
+  // Simulate async latency
+  await new Promise((r) => setTimeout(r, 600));
+
+  /** Compute a 0-1 name-similarity score between two strings */
+  function nameSimilarity(a: string, b: string): number {
+    const al = a.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const bl = b.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (al === bl) return 1.0;
+    if (al.includes(bl) || bl.includes(al)) return 0.75;
+    // Count shared bigrams
+    const bigrams = (s: string) => Array.from({ length: Math.max(0, s.length - 1) }, (_, i) => s.slice(i, i + 2));
+    const aBi = new Set(bigrams(al));
+    const bBi = bigrams(bl);
+    const shared = bBi.filter((bg) => aBi.has(bg)).length;
+    const denom = aBi.size + bBi.length;
+    return denom === 0 ? 0 : (2 * shared) / denom;
+  }
+
+  /** Affinity score between source region type and target layout type */
+  const TYPE_AFFINITY: Record<string, Record<string, number>> = {
+    Header:       { flex: 0.9, grid: 0.4, tabs: 0.2, sections: 0.3, inline: 0.7 },
+    FormSection:  { flex: 0.7, grid: 0.95, tabs: 0.5, sections: 0.7, inline: 0.4 },
+    Attachments:  { flex: 0.85, grid: 0.3, tabs: 0.4, sections: 0.5, inline: 0.3 },
+    ActivityFeed: { flex: 0.85, grid: 0.2, tabs: 0.5, sections: 0.5, inline: 0.2 },
+    Steps:        { flex: 0.6, grid: 0.3, tabs: 0.3, sections: 0.5, inline: 0.9 },
+    DataGrid:     { flex: 0.6, grid: 0.9, tabs: 0.4, sections: 0.4, inline: 0.2 },
+    CaseSummary:  { flex: 0.8, grid: 0.5, tabs: 0.3, sections: 0.6, inline: 0.4 },
+    Navigation:   { flex: 0.5, grid: 0.2, tabs: 0.4, sections: 0.2, inline: 0.95 },
+    Footer:       { flex: 0.7, grid: 0.2, tabs: 0.2, sections: 0.2, inline: 0.95 },
+    Card:         { flex: 0.8, grid: 0.7, tabs: 0.4, sections: 0.7, inline: 0.3 },
+    Tabs:         { flex: 0.3, grid: 0.3, tabs: 0.98, sections: 0.5, inline: 0.2 },
+    Unknown:      { flex: 0.6, grid: 0.5, tabs: 0.3, sections: 0.5, inline: 0.4 },
+  };
+
+  // Build scored candidate matrix
+  const usedTargetIds = new Set<string>();
+  const suggestions: RegionMappingSuggestion[] = [];
+  const unmatchedSourceIds: string[] = [];
+
+  for (const src of sourceRegions) {
+    let best: { targetId: string; score: number; layout: string } | null = null;
+
+    for (const tgt of targetRegions) {
+      if (usedTargetIds.has(tgt.id)) continue;
+      const nameScore = nameSimilarity(src.name, tgt.name);
+      const affinityMap = TYPE_AFFINITY[src.type] ?? TYPE_AFFINITY.Unknown;
+      const affinity = affinityMap[tgt.layout ?? 'flex'] ?? 0.5;
+      const score = 0.5 * nameScore + 0.5 * affinity;
+      if (!best || score > best.score) {
+        best = { targetId: tgt.id, score, layout: tgt.layout ?? 'flex' };
+      }
+    }
+
+    if (best && best.score >= 0.35) {
+      // Determine cardinality hint from type
+      const mappingType: MappingType = 'one-to-one';
+      suggestions.push({
+        sourceRegionId: src.id,
+        targetRegionId: best.targetId,
+        mappingType,
+        confidence: Math.min(0.97, best.score),
+        reason: `Name similarity + type affinity score: ${best.score.toFixed(2)}. "${src.name}" (${src.type}) matched to target layout "${best.layout}".`,
+      });
+      usedTargetIds.add(best.targetId);
+    } else {
+      unmatchedSourceIds.push(src.id);
+    }
+  }
+
+  return {
+    suggestions,
+    autoMappedCount: suggestions.length,
+    unmatchedSourceIds,
+    mock: true,
+  };
+}
+
+// ─── Optimize Layout Mapping ──────────────────────────────────────────────────
+
+export interface AIOptimizeLayoutMappingResult {
+  /** Proposed changes with rationale */
+  recommendations: Array<{
+    mappingId: string;
+    suggestion: string;
+    autoApply: boolean;
+    proposedMappingType?: MappingType;
+  }>;
+  overallScore: number;
+  mock: boolean;
+}
+
+/**
+ * Analyse an existing set of region mappings for layout quality issues.
+ *
+ * Mock checks:
+ * - Source regions mapped to incompatible target layout types
+ * - N:1 mappings that should be split into separate targets
+ * - Unmapped regions that might degrade the output
+ *
+ * @param mappings            - Current mapping rules
+ * @param sourceRegionsMeta   - Source region metadata (id, type)
+ * @param targetRegionsMeta   - Target region metadata (id, layout)
+ */
+export async function optimizeLayoutMapping(
+  mappings: Array<{ id: string; sourceRegionId: string; targetRegionId: string; mappingType: MappingType }>,
+  sourceRegionsMeta: Array<{ id: string; name: string; type: string }>,
+  targetRegionsMeta: Array<{ id: string; name: string; layout: string }>
+): Promise<AIOptimizeLayoutMappingResult> {
+  await new Promise((r) => setTimeout(r, 500));
+
+  const srcMap = new Map(sourceRegionsMeta.map((r) => [r.id, r]));
+  const tgtMap = new Map(targetRegionsMeta.map((r) => [r.id, r]));
+
+  const recommendations: AIOptimizeLayoutMappingResult['recommendations'] = [];
+
+  // Count how many sources map to each target
+  const targetUsage = new Map<string, number>();
+  for (const m of mappings) {
+    targetUsage.set(m.targetRegionId, (targetUsage.get(m.targetRegionId) ?? 0) + 1);
+  }
+
+  for (const m of mappings) {
+    const src = srcMap.get(m.sourceRegionId);
+    const tgt = tgtMap.get(m.targetRegionId);
+    if (!src || !tgt) continue;
+
+    const usage = targetUsage.get(m.targetRegionId) ?? 1;
+
+    // Warn if many-to-one should be declared explicitly
+    if (usage > 1 && m.mappingType === 'one-to-one') {
+      recommendations.push({
+        mappingId: m.id,
+        suggestion: `Target "${tgt.name}" receives ${usage} sources — change mapping type to "many-to-one" for correct merging.`,
+        autoApply: true,
+        proposedMappingType: 'many-to-one',
+      });
+    }
+
+    // Suggest layout changes for poor affinity
+    const POOR_FITS: Record<string, string[]> = {
+      Tabs:    ['grid', 'inline'],
+      Steps:   ['grid', 'sections'],
+      DataGrid: ['sections', 'tabs', 'inline'],
+    };
+    if (POOR_FITS[src.type]?.includes(tgt.layout)) {
+      recommendations.push({
+        mappingId: m.id,
+        suggestion: `"${src.name}" (type: ${src.type}) is mapped to a "${tgt.layout}" target. Consider changing target layout to "flex" or "tabs" for better visual fit.`,
+        autoApply: false,
+      });
+    }
+  }
+
+  // Score = 1 - (issues / totalMappings), clamped [0,1]
+  const issueCount = recommendations.filter((r) => !r.autoApply).length;
+  const overallScore = mappings.length === 0 ? 0 : Math.max(0, 1 - issueCount / mappings.length);
+
+  return { recommendations, overallScore, mock: true };
+}

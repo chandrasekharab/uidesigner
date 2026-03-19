@@ -660,3 +660,283 @@ export function convertCanonicalToA2UI(
 ): Record<string, unknown>[] {
   return schema.map((c) => a2uiNodeFromCanonical(c, overrides));
 }
+
+// ─── Region-Mapping-Driven Transformation ────────────────────────────────────
+
+import type { RegionMapping, TargetLayoutRegion, TransformationRule } from '@/models/RegionMapping';
+import { PEGA_TEMPLATE_MAP } from '@/config/pegaTemplates';
+
+export interface RegionMappingTransformOptions {
+  /** Optional per-component type/prop overrides (forwarded to transformNode) */
+  componentOverrides?: Map<string, MappingOverride>;
+}
+
+export interface RegionMappingTransformResult {
+  /** Final UIComponent[] tree arranged per the target layout */
+  targetComponents: UIComponent[];
+  /** Intermediate canonical nodes (for inspection / downstream transforms) */
+  intermediateSchema: CanonicalComponent[];
+  /** Flat list of source regions that were skipped (no mapping) */
+  unmappedSourceRegionIds: string[];
+  /** Target regions that received no content */
+  emptyTargetRegionIds: string[];
+  /** Informational log of what happened during transformation */
+  log: string[];
+}
+
+/**
+ * Apply region-level transformation rules to a Pega transformation result.
+ *
+ * @param transformation - The field to transform
+ * @param rules          - Transformation rules from the RegionMapping
+ * @param log            - Mutable log array
+ */
+function applyTransformationRules(
+  node: CanonicalComponent,
+  rules: TransformationRule[],
+  log: string[]
+): CanonicalComponent {
+  let result = { ...node };
+
+  for (const rule of rules) {
+    switch (rule.type) {
+      case 'layout-change': {
+        const newLayout = rule.params?.layoutType as string | undefined;
+        if (newLayout && result.category === 'layout') {
+          result = {
+            ...result,
+            layoutConfig: {
+              ...result.layoutConfig,
+              layoutType: newLayout as LayoutConfig['layoutType'],
+              columns: (rule.params?.columns as number) ?? result.layoutConfig?.columns,
+            },
+          };
+          log.push(`  layout-change: ${result.label} → layoutType=${newLayout}`);
+        }
+        break;
+      }
+      case 'widget-replacement': {
+        const newType = rule.params?.canonicalType as CanonicalType | undefined;
+        if (newType) {
+          result = { ...result, type: newType };
+          log.push(`  widget-replacement: ${result.label} → ${newType}`);
+        }
+        break;
+      }
+      case 'field-grouping': {
+        // Wrap children into a sub-section with a label
+        const groupLabel = (rule.params?.label as string) ?? 'Group';
+        const grouped: CanonicalComponent = {
+          id: uuidv4(),
+          type: 'Section',
+          category: 'layout',
+          label: groupLabel,
+          props: { label: groupLabel },
+          bindings: {},
+          validations: [],
+          children: result.children,
+          _meta: { sourceType: 'Group', sourcePath: '', mappingRule: 'field-grouping' },
+        };
+        result = { ...result, children: [grouped] };
+        log.push(`  field-grouping: wrapped children of "${result.label}" into section "${groupLabel}"`);
+        break;
+      }
+      case 'property-remap': {
+        const from = rule.params?.from as string | undefined;
+        const to = rule.params?.to as string | undefined;
+        if (from && to && result.bindings?.field === from) {
+          result = { ...result, bindings: { ...result.bindings, field: to } };
+          log.push(`  property-remap: .${from} → .${to} on "${result.label}"`);
+        }
+        break;
+      }
+      case 'visibility-rule': {
+        const condition = rule.params?.condition as string | undefined;
+        if (condition) {
+          result = { ...result, visibility: { condition } };
+          log.push(`  visibility-rule: "${result.label}" condition="${condition}"`);
+        }
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Transform a Pega source template JSON into a target UIComponent[] tree
+ * driven by a set of RegionMapping rules and a user-defined target layout.
+ *
+ * Pipeline:
+ *   1. Parse the source Pega JSON → Canonical intermediate schema
+ *   2. Index canonical nodes by source region name/type
+ *   3. For each RegionMapping, move canonical children to the target region slot
+ *   4. Apply any TransformationRules per mapping
+ *   5. Convert the reordered canonical tree → UIComponent[] target output
+ *
+ * @param sourcePegaJson      - Raw Pega Constellation JSON (view envelope or array)
+ * @param regionMappings      - Mapping rules from the Template Mapping Studio
+ * @param targetRegions       - User-defined target layout regions (ordered)
+ * @param sourceTemplateId    - ID of the source PegaTemplate (for region metadata)
+ * @param options             - Optional component-level overrides
+ */
+export function transformUsingRegionMapping(
+  sourcePegaJson: unknown,
+  regionMappings: RegionMapping[],
+  targetRegions: TargetLayoutRegion[],
+  sourceTemplateId: string,
+  options: RegionMappingTransformOptions = {}
+): RegionMappingTransformResult {
+  const log: string[] = [];
+
+  // ── Step 1: Parse source JSON → canonical ─────────────────────────────────
+  const intermediateSchema = parsePegaToIntermediate(sourcePegaJson);
+  log.push(`Parsed ${intermediateSchema.length} top-level canonical node(s) from source JSON.`);
+
+  // Retrieve template region metadata for name-based lookup
+  const template = PEGA_TEMPLATE_MAP.get(sourceTemplateId);
+
+  // ── Step 2: Build a fast lookup of canonical nodes by region id / name ────
+  // Map: sourceRegionId → CanonicalComponent[]
+  const regionChildrenMap = new Map<string, CanonicalComponent[]>();
+
+  // Index by position (template region order = canonical node order for top-level)
+  if (template) {
+    template.regions.forEach((templateRegion, idx) => {
+      const canonicalNode = intermediateSchema[idx];
+      if (canonicalNode) {
+        regionChildrenMap.set(templateRegion.id, [canonicalNode, ...(canonicalNode.children ?? [])]);
+        log.push(`Indexed region "${templateRegion.id}" → canonical[${idx}] "${canonicalNode.label}"`);
+      } else {
+        // Seed from sampleJson if canonical parse was shallow
+        regionChildrenMap.set(templateRegion.id, []);
+        log.push(`Region "${templateRegion.id}" has no matching canonical node — will use empty children.`);
+      }
+    });
+  } else {
+    // No template metadata — fall back to distributing nodes equally
+    intermediateSchema.forEach((node, idx) => {
+      const syntheticId = `region-${idx}`;
+      regionChildrenMap.set(syntheticId, [node]);
+      log.push(`Synthetic region "${syntheticId}" → canonical[${idx}] "${node.label}"`);
+    });
+  }
+
+  // ── Step 3: Build target canonical tree from mappings ────────────────────
+  const targetCanonicalMap = new Map<string, CanonicalComponent[]>();
+  for (const tr of targetRegions) {
+    targetCanonicalMap.set(tr.id, []);
+  }
+
+  const mappedSourceIds = new Set<string>();
+
+  for (const mapping of regionMappings) {
+    const { sourceRegionId, targetRegionId, mappingType, transformations = [] } = mapping;
+
+    const sourceChildren = regionChildrenMap.get(sourceRegionId) ?? [];
+    mappedSourceIds.add(sourceRegionId);
+
+    if (!targetCanonicalMap.has(targetRegionId)) {
+      log.push(`WARNING: target region "${targetRegionId}" not found in target layout — skipping.`);
+      continue;
+    }
+
+    log.push(`Mapping [${mappingType}] "${sourceRegionId}" → "${targetRegionId}" (${sourceChildren.length} node(s))`);
+
+    // Apply transformation rules to each source node
+    let transformedChildren = sourceChildren.map((child) =>
+      applyTransformationRules(child, transformations, log)
+    );
+
+    // For many-to-one, merge strategy: all source children go into a wrapper Section
+    if (mappingType === 'many-to-one' && transformedChildren.length > 1) {
+      const mergedLabel = mapping.label ?? `Merged: ${sourceRegionId}`;
+      transformedChildren = [{
+        id: uuidv4(),
+        type: 'Section',
+        category: 'layout',
+        label: mergedLabel,
+        props: { label: mergedLabel },
+        bindings: {},
+        validations: [],
+        children: transformedChildren,
+        _meta: { sourceType: 'MergedSection', sourcePath: sourceRegionId, mappingRule: 'many-to-one merge' },
+      }];
+      log.push(`  many-to-one: merged ${sourceChildren.length} children into section "${mergedLabel}"`);
+    }
+
+    // Append to target region's children
+    const existing = targetCanonicalMap.get(targetRegionId) ?? [];
+    targetCanonicalMap.set(targetRegionId, [...existing, ...transformedChildren]);
+  }
+
+  // ── Step 4: Assemble ordered target canonical tree ────────────────────────
+  const targetCanonical: CanonicalComponent[] = [];
+
+  for (const tr of targetRegions) {
+    const children = targetCanonicalMap.get(tr.id) ?? [];
+
+    // Map TargetLayoutType → CanonicalType
+    const layoutTypeMap: Record<string, CanonicalType> = {
+      flex: 'SingleColumn',
+      grid: 'TwoColumn',
+      tabs: 'TabsLayout',
+      sections: 'AccordionLayout',
+      inline: 'InlineLayout',
+    };
+    const canonicalLayoutType: CanonicalType = layoutTypeMap[tr.layout] ?? 'SingleColumn';
+
+    const regionNode: CanonicalComponent = {
+      id: uuidv4(),
+      type: canonicalLayoutType,
+      category: 'layout',
+      label: tr.name,
+      props: { label: tr.name },
+      bindings: {},
+      validations: [],
+      layoutConfig: {
+        layoutType: tr.layout === 'grid' ? 'twoColumn' : tr.layout === 'tabs' ? 'tabs' : tr.layout === 'sections' ? 'accordion' : 'singleColumn',
+        columns: tr.columns ?? 1,
+        gap: 16,
+      },
+      children,
+      _meta: { sourceType: 'TargetRegion', sourcePath: tr.id, mappingRule: `target-region:${tr.layout}` },
+    };
+
+    targetCanonical.push(regionNode);
+    log.push(`Target region "${tr.name}" assembled with ${children.length} child node(s).`);
+  }
+
+  // ── Step 5: Convert to UIComponent[] ─────────────────────────────────────
+  const targetComponents = transformIntermediateToTarget(
+    targetCanonical,
+    options.componentOverrides
+  );
+
+  // ── Step 6: Collect unmapped info ─────────────────────────────────────────
+  const allSourceIds = template?.regions.map((r) => r.id) ??
+    Array.from(regionChildrenMap.keys());
+  const unmappedSourceRegionIds = allSourceIds.filter((id) => !mappedSourceIds.has(id));
+
+  const emptyTargetRegionIds = targetRegions
+    .filter((tr) => (targetCanonicalMap.get(tr.id)?.length ?? 0) === 0)
+    .map((tr) => tr.id);
+
+  if (unmappedSourceRegionIds.length > 0) {
+    log.push(`Unmapped source regions (omitted): ${unmappedSourceRegionIds.join(', ')}`);
+  }
+  if (emptyTargetRegionIds.length > 0) {
+    log.push(`Empty target regions (no content): ${emptyTargetRegionIds.join(', ')}`);
+  }
+
+  log.push(`Transformation complete. Generated ${targetComponents.length} top-level target component(s).`);
+
+  return {
+    targetComponents,
+    intermediateSchema,
+    unmappedSourceRegionIds,
+    emptyTargetRegionIds,
+    log,
+  };
+}

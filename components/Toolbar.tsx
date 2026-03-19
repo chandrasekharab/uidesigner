@@ -26,6 +26,7 @@ import {
   ScanLine,
   ShieldCheck,
   MapPin,
+  LayoutTemplate,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -215,6 +216,17 @@ export const Toolbar = memo(function Toolbar() {
         >
           <MapPin size={12} /> Regions
         </button>
+        <button
+          onClick={() => setAppMode('template-map')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'template-map'
+              ? 'bg-white dark:bg-slate-700 text-rose-700 dark:text-rose-300 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          )}
+        >
+          <LayoutTemplate size={12} /> Template Map
+        </button>
       </div>
 
       {/* Builder-only controls */}
@@ -280,6 +292,13 @@ export const Toolbar = memo(function Toolbar() {
         <span className="text-xs text-teal-700 dark:text-teal-300 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-teal-50 dark:bg-teal-900/20 px-2 py-1 rounded-md">
           <MapPin size={12} />
           Highlight &amp; Map Regions
+        </span>
+      )}
+
+      {appMode === 'template-map' && (
+        <span className="text-xs text-rose-700 dark:text-rose-300 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-md">
+          <LayoutTemplate size={12} />
+          Template Mapping Studio
         </span>
       )}
 
