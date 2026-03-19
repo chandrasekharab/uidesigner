@@ -170,3 +170,136 @@ export async function suggestFixesForRendering(
   return { suggestions, mock: true };
 }
 
+// ─── Design-to-Pega Vision Functions ─────────────────────────────────────────
+
+import type { ParsedDesign } from '@/services/designParser';
+import type { PegaConstellationMetadata } from '@/services/pegaMetadataGenerator';
+
+export interface AIDesignDetectResult {
+  design: ParsedDesign;
+  mock: boolean;
+}
+
+export interface AIDesignSchemaResult {
+  metadata: PegaConstellationMetadata;
+  mock: boolean;
+}
+
+/**
+ * Send an image file to the AI vision pipeline.
+ * Calls /api/ai/parse-design, which proxies to a real vision model when
+ * AI_API_KEY is set, or returns a mock response in dev mode.
+ */
+export async function detectUIFromImage(
+  file: File
+): Promise<AIDesignDetectResult> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const res = await fetch('/api/ai/parse-design', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(err.error ?? 'Design detection failed');
+  }
+
+  const design: ParsedDesign = await res.json();
+  return { design, mock: design.mock };
+}
+
+/**
+ * Generate a Pega Constellation schema from a text description of the design.
+ * Useful when no image is available — delegates to the generate endpoint.
+ */
+export async function generatePegaSchemaFromDesign(
+  description: string
+): Promise<AIDesignSchemaResult> {
+  const prompt = `You are a Pega Constellation metadata generator. 
+Generate a valid Pega Constellation View JSON for the following UI description:
+"${description}"
+
+Return JSON matching: { view: { type, name, regions: [{ name, fields: [...] }], actions: [...] } }`;
+
+  const res = await fetch('/api/ai/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!res.ok) {
+    // Fallback mock
+    return buildMockPegaSchemaFromDescription(description);
+  }
+
+  const data = await res.json();
+
+  // The generate endpoint returns { components, mock }.
+  // Wrap into a minimal Pega metadata envelope.
+  const metadata: PegaConstellationMetadata = {
+    view: {
+      type: 'form',
+      name: description.substring(0, 40),
+      regions: [
+        {
+          name: 'body',
+          layout: 'stacked',
+          fields: (data.components ?? []).map((c: { props?: { label?: string; content?: string }; type?: string }) => ({
+            type: c.type === 'Button' ? 'button' : 'text',
+            label: c.props?.label ?? c.props?.content ?? '',
+          })),
+        },
+      ],
+      actions: [],
+    },
+  };
+
+  return { metadata, mock: data.mock ?? true };
+}
+
+function buildMockPegaSchemaFromDescription(
+  description: string
+): AIDesignSchemaResult {
+  const lower = description.toLowerCase();
+  const isLogin = lower.includes('login') || lower.includes('sign in');
+  const isForm = lower.includes('form') || lower.includes('register');
+
+  const metadata: PegaConstellationMetadata = {
+    view: {
+      type: 'form',
+      name: description.substring(0, 50),
+      regions: [
+        {
+          name: 'body',
+          layout: 'stacked',
+          fields: isLogin
+            ? [
+                { type: 'email', label: 'Email Address', property: '.EmailAddress' },
+                { type: 'password', label: 'Password', property: '.Password' },
+              ]
+            : isForm
+            ? [
+                { type: 'text', label: 'Full Name', property: '.FullName' },
+                { type: 'email', label: 'Email', property: '.Email' },
+              ]
+            : [{ type: 'text', label: 'Field 1', property: '.Field1' }],
+        },
+      ],
+      actions: [
+        { type: 'button', label: isLogin ? 'Login' : 'Submit', actionType: 'Submit', variant: 'primary' },
+      ],
+      _meta: {
+        generatedBy: 'design-parser',
+        parseId: `desc-${Date.now()}`,
+        mock: true,
+        componentCount: 3,
+        confidence: 0.72,
+      },
+    },
+  };
+
+  return { metadata, mock: true };
+}
+

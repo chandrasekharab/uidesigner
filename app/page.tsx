@@ -5,6 +5,7 @@ import { Toolbar } from '@/components/Toolbar';
 import { BuilderLayout } from '@/components/BuilderLayout';
 import { TransformationStudio } from '@/components/transform/TransformationStudio';
 import { RendererExperience } from '@/components/renderer/RendererExperience';
+import { DesignGeneratorExperience } from '@/components/design/DesignGeneratorExperience';
 import { useBuilderStore } from '@/store/builderStore';
 
 export default function BuilderPage() {
@@ -17,6 +18,8 @@ export default function BuilderPage() {
         <BuilderLayout />
       ) : appMode === 'transform' ? (
         <TransformationStudio />
+      ) : appMode === 'design' ? (
+        <DesignGeneratorExperience />
       ) : (
         <RendererExperience />
       )}

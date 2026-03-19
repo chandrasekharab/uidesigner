@@ -23,6 +23,7 @@ import {
   SendToBack,
   Moon,
   Sun,
+  ScanLine,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -179,6 +180,17 @@ export const Toolbar = memo(function Toolbar() {
         >
           <Play size={12} /> Render
         </button>
+        <button
+          onClick={() => setAppMode('design')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'design'
+              ? 'bg-white dark:bg-slate-700 text-violet-700 dark:text-violet-300 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          )}
+        >
+          <ScanLine size={12} /> Generate
+        </button>
       </div>
 
       {/* Builder-only controls */}
@@ -223,6 +235,13 @@ export const Toolbar = memo(function Toolbar() {
         <span className="text-xs text-blue-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
           <Play size={12} />
           A2UI Renderer Experience
+        </span>
+      )}
+
+      {appMode === 'design' && (
+        <span className="text-xs text-violet-700 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 px-2 py-1 rounded-md">
+          <ScanLine size={12} />
+          Design-to-Pega Generator
         </span>
       )}
 
