@@ -236,3 +236,114 @@ export function validateRegionMappings(
     unmappedTargetIds,
   };
 }
+
+// ─── Figma Target Layout Extension ───────────────────────────────────────────
+// These types extend the existing model to support Figma nodes as mapping targets.
+// The existing RegionMapping / TargetLayoutRegion types are FULLY preserved.
+
+/** Fixed mapping mode for a Figma-aware mapping (extends MappingType) */
+export type FigmaMappingType =
+  | MappingType
+  | 'figma-one-to-one'  // Source region content placed exactly inside a Figma frame
+  | 'figma-overlay';   // Source region rendered as overlay on a Figma background
+
+/** Transformation rules available for Figma-target mappings */
+export type FigmaTransformationType =
+  | TransformationType
+  | 'figma-layout-align'      // Align layout to Figma auto-layout direction
+  | 'figma-constraint-apply'  // Apply Figma constraints (fill/hug/fixed size)
+  | 'figma-token-apply';      // Apply Figma design tokens (colors, spacing)
+
+export interface FigmaTransformationRule extends Omit<TransformationRule, 'type'> {
+  type: FigmaTransformationType;
+  /** Figma design token key (for figma-token-apply) */
+  tokenKey?: string;
+}
+
+/**
+ * Extended RegionMapping that adds optional Figma node targeting.
+ * Backwards-compatible: if targetFigmaNodeId is absent, behaves as standard RegionMapping.
+ */
+export interface FigmaRegionMapping extends RegionMapping {
+  /** Figma node id to use as the layout target (from FigmaNode.id) */
+  targetFigmaNodeId?: string;
+  /** Human-readable Figma node name for display */
+  targetFigmaNodeName?: string;
+  /** Figma path string for the target node */
+  targetFigmaNodePath?: string;
+  /** Extended mapping type including Figma-specific variants */
+  figmaMappingType?: FigmaMappingType;
+  /** Figma-specific transformation rules */
+  figmaTransformations?: FigmaTransformationRule[];
+  /** Whether to inherit Figma design tokens from target node */
+  inheritFigmaTokens?: boolean;
+}
+
+/** Figma-enabled target layout — extends TargetLayout with figma import metadata */
+export interface FigmaTargetLayout {
+  id: string;
+  name: string;
+  /** Source Figma file identifier or filename */
+  figmaFileId?: string;
+  figmaFileName?: string;
+  figmaPageName?: string;
+  /** ISO timestamp when the Figma file was imported */
+  importedAt: string;
+  /** Regions derived from Figma frames */
+  regions: TargetLayoutRegion[];
+  /** Original parse stats */
+  parseMeta?: {
+    totalNodes: number;
+    frameCount: number;
+    componentCount: number;
+    primaryPage: string;
+  };
+}
+
+/** Validation result for Figma-aware mappings */
+export interface FigmaMappingValidationSummary extends MappingValidationSummary {
+  /** Figma nodes referenced in mappings that are no longer present in the layout */
+  staleFigmaNodeIds: string[];
+  /** Figma nodes that have no mapping yet */
+  unmappedFigmaNodeIds: string[];
+}
+
+/**
+ * Validate a set of Figma-aware mappings.
+ * Falls back to standard validation for non-Figma mappings.
+ */
+export function validateFigmaMappings(
+  mappings: FigmaRegionMapping[],
+  sourceRegionIds: string[],
+  targetRegionIds: string[],
+  figmaNodeIds: string[] = []
+): FigmaMappingValidationSummary {
+  const base = validateRegionMappings(mappings, sourceRegionIds, targetRegionIds);
+
+  // Check for stale figma node references
+  const referencedFigmaIds = mappings
+    .map((m) => m.targetFigmaNodeId)
+    .filter((id): id is string => !!id);
+
+  const staleFigmaNodeIds = referencedFigmaIds.filter(
+    (id) => figmaNodeIds.length > 0 && !figmaNodeIds.includes(id)
+  );
+
+  // Figma nodes that have mappings
+  const mappedFigmaNodeIds = new Set(referencedFigmaIds);
+  const unmappedFigmaNodeIds = figmaNodeIds.filter((id) => !mappedFigmaNodeIds.has(id));
+
+  const extraIssues: MappingIssue[] = staleFigmaNodeIds.map((id) => ({
+    severity: 'error' as MappingIssueSeverity,
+    regionId: id,
+    message: `Figma node "${id}" is referenced in a mapping but no longer exists in the imported layout.`,
+  }));
+
+  return {
+    ...base,
+    issues: [...base.issues, ...extraIssues],
+    valid: base.valid && staleFigmaNodeIds.length === 0,
+    staleFigmaNodeIds,
+    unmappedFigmaNodeIds,
+  };
+}

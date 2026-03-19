@@ -49,6 +49,10 @@ import {
   Eye,
   GripVertical,
   X,
+  Layers,
+  Box,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
@@ -77,7 +81,21 @@ import {
 import {
   suggestRegionMappings,
   optimizeLayoutMapping,
+  mapPegaToFigma,
+  autoMapPegaToFigma,
 } from '@/services/aiService';
+import type { FigmaParseResult } from '@/services/figmaParser';
+import {
+  transformFigmaToTargetLayout,
+} from '@/services/figmaLayoutTransformer';
+import type { FigmaTargetRegion } from '@/services/figmaLayoutTransformer';
+import type { FigmaRegionMapping } from '@/models/RegionMapping';
+import {
+  transformUsingFigmaLayout,
+  type FigmaTransformResult,
+} from '@/services/schemaTransformer';
+import { FigmaTargetPanel } from './FigmaTargetPanel';
+import { FigmaImportDialog } from './FigmaImportDialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -878,6 +896,18 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAutoMapping, setIsAutoMapping] = useState(false);
 
+  // ── Figma Mode State ───────────────────────────────────────────────────────
+  const [figmaMode, setFigmaMode] = useState(false);
+  const [showFigmaDialog, setShowFigmaDialog] = useState(false);
+  const [figmaParseResult, setFigmaParseResult] = useState<FigmaParseResult | null>(null);
+  const [figmaSourceName, setFigmaSourceName] = useState<string>('');
+  const [figmaRegions, setFigmaRegions] = useState<FigmaTargetRegion[]>([]);
+  // Figma mode uses FigmaRegionMapping (extends RegionMapping) so the same
+  // connector + output machinery can operate on it without changes.
+  const [figmaMappings, setFigmaMappings] = useState<FigmaRegionMapping[]>([]);
+  const [figmaTransformResult, setFigmaTransformResult] = useState<FigmaTransformResult | null>(null);
+  const [isFigmaAutoMapping, setIsFigmaAutoMapping] = useState(false);
+
   // SVG connector state
   const containerRef = useRef<HTMLDivElement>(null);
   const sourceRegionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -903,8 +933,11 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
     const cRect = container.getBoundingClientRect();
     setSvgSize({ w: cRect.width, h: cRect.height });
 
+    // Use figma mappings or standard mappings depending on current mode
+    const currentMappings = figmaMode ? figmaMappings : mappings;
+
     const paths: ConnectorPath[] = [];
-    for (const m of mappings) {
+    for (const m of currentMappings) {
       const srcEl = sourceRegionRefs.current.get(m.sourceRegionId);
       const tgtEl = targetRegionRefs.current.get(m.targetRegionId);
       if (!srcEl || !tgtEl) continue;
@@ -924,11 +957,11 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
       paths.push({ id: m.id, d, color, selected: m.id === selectedMappingId });
     }
     setConnectorPaths(paths);
-  }, [mappings, selectedMappingId, selectedTemplate]);
+  }, [figmaMode, figmaMappings, mappings, selectedMappingId, selectedTemplate]);
 
   useLayoutEffect(() => {
     recalcConnectors();
-  }, [recalcConnectors, targetRegions]);
+  }, [recalcConnectors, figmaMode ? figmaRegions : targetRegions]);
 
   // Recalc on resize
   useEffect(() => {
@@ -1027,15 +1060,153 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
 
   // ── Clear All ─────────────────────────────────────────────────────────────
   const handleClearAll = useCallback(() => {
-    if (mappings.length === 0) return;
+    const count = figmaMode ? figmaMappings.length : mappings.length;
+    if (count === 0) return;
     if (!confirm('Clear all mappings?')) return;
-    setMappings([]);
+    if (figmaMode) {
+      setFigmaMappings([]);
+      setFigmaTransformResult(null);
+    } else {
+      setMappings([]);
+      setTransformResult(null);
+    }
     setSelectedMappingId(null);
-    setTransformResult(null);
-  }, [mappings.length]);
+  }, [mappings.length, figmaMappings.length, figmaMode]);
+
+  // ── Figma Import ──────────────────────────────────────────────────────────
+  const handleFigmaImport = useCallback((result: FigmaParseResult, name: string) => {
+    setFigmaParseResult(result);
+    setFigmaSourceName(name);
+    const { regions } = transformFigmaToTargetLayout(result.nodes, 2, false);
+    setFigmaRegions(regions);
+    setFigmaMappings([]);
+    setFigmaTransformResult(null);
+    setFigmaMode(true);
+    sourceRegionRefs.current.clear();
+    targetRegionRefs.current.clear();
+    showToast('success', `Figma layout "${name}" imported — ${regions.length} target region(s) created.`);
+  }, [showToast]);
+
+  // ── Figma node selected as connection target ──────────────────────────────
+  const handleFigmaNodeSelect = useCallback((region: FigmaTargetRegion) => {
+    if (!connectingFromId) return;
+    const sourceRegionId = connectingFromId;
+
+    // Prevent duplicate
+    const existing = figmaMappings.find(
+      (m) => m.sourceRegionId === sourceRegionId && m.targetRegionId === region.id
+    );
+    if (existing) {
+      showToast('info', 'This connection already exists.');
+      setConnectingFromId(null);
+      return;
+    }
+
+    const srcName = selectedTemplate?.regions.find((r) => r.id === sourceRegionId)?.name ?? sourceRegionId;
+
+    const newMapping: FigmaRegionMapping = {
+      id: uuidv4(),
+      sourceRegionId,
+      targetRegionId: region.id,
+      targetFigmaNodeId: region.figmaNodeId,
+      targetFigmaNodeName: region.name,
+      targetFigmaNodePath: region.figmaPath,
+      mappingType: 'one-to-one',
+      transformations: [],
+      label: deriveMappingLabel(srcName, region.name),
+      source: 'manual',
+    };
+
+    setFigmaMappings((prev) => [...prev, newMapping]);
+    setConnectingFromId(null);
+    setFigmaTransformResult(null);
+    showToast('success', `Connected: ${srcName} → ${region.name} (Figma)`);
+  }, [connectingFromId, figmaMappings, selectedTemplate, showToast]);
+
+  // ── Figma Auto-Map (AI) ───────────────────────────────────────────────────
+  const handleFigmaAutoMap = useCallback(async () => {
+    if (!selectedTemplate || !figmaParseResult) {
+      showToast('error', 'Select a source template and import a Figma layout first.');
+      return;
+    }
+    setIsFigmaAutoMapping(true);
+    try {
+      // Build a map from figmaNodeId → targetRegionId
+      const figmaNodeToRegionId = new Map(
+        figmaRegions.map((r) => [r.figmaNodeId, r.id])
+      );
+
+      const newMappings = await autoMapPegaToFigma(
+        selectedTemplate.regions.map((r) => ({ id: r.id, name: r.name, type: r.type, description: r.description })),
+        figmaParseResult.nodes,
+        figmaNodeToRegionId
+      );
+
+      setFigmaMappings(newMappings);
+      setFigmaTransformResult(null);
+      showToast(
+        'success',
+        `AI (mock) suggested ${newMappings.length} Figma mapping(s). Review and adjust.`
+      );
+    } catch (e) {
+      showToast('error', `Figma auto-map failed: ${(e as Error).message}`);
+    } finally {
+      setIsFigmaAutoMapping(false);
+    }
+  }, [selectedTemplate, figmaParseResult, figmaRegions, showToast]);
+
+  // ── Figma Generate ────────────────────────────────────────────────────────
+  const handleFigmaGenerate = useCallback(async () => {
+    if (!selectedTemplate) {
+      showToast('error', 'Select a source template first.');
+      return;
+    }
+    if (figmaMappings.length === 0) {
+      showToast('error', 'Add at least one Figma mapping before generating.');
+      return;
+    }
+    setIsGenerating(true);
+    setActiveTab('output');
+    try {
+      const result = transformUsingFigmaLayout(
+        selectedTemplate.sampleJson,
+        figmaMappings,
+        figmaRegions,
+        selectedTemplate.id
+      );
+      setFigmaTransformResult(result);
+      showToast('success', `Generated ${result.targetComponents.length} component(s) from Figma layout.`);
+    } catch (e) {
+      showToast('error', `Figma generation failed: ${(e as Error).message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [selectedTemplate, figmaMappings, figmaRegions, showToast]);
+
+  // ── Toggle Figma Mode ─────────────────────────────────────────────────────
+  const handleToggleFigmaMode = useCallback(() => {
+    if (!figmaMode && !figmaParseResult) {
+      // Opening figma mode without an import — show the dialog
+      setShowFigmaDialog(true);
+      return;
+    }
+    setFigmaMode((prev) => !prev);
+    setConnectingFromId(null);
+    setSelectedMappingId(null);
+    sourceRegionRefs.current.clear();
+    targetRegionRefs.current.clear();
+  }, [figmaMode, figmaParseResult]);
+
+  // In figma mode, expose figma mappings as the "active" mapping set
+  // so existing connector/output components can reuse them transparently.
+  const activeMappings: RegionMapping[] = figmaMode ? figmaMappings : mappings;
+  const activeTargetRegions: TargetLayoutRegion[] = figmaMode ? figmaRegions : targetRegions;
+  const activeTransformResult = figmaMode ? figmaTransformResult : transformResult;
+  const activeMapCount = activeMappings.length;
 
   // ── AI Auto-Map ───────────────────────────────────────────────────────────
   const handleAutoMap = useCallback(async () => {
+    if (figmaMode) { await handleFigmaAutoMap(); return; }
     if (!selectedTemplate) {
       showToast('error', 'Select a source template first.');
       return;
@@ -1079,10 +1250,11 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
     } finally {
       setIsAutoMapping(false);
     }
-  }, [selectedTemplate, targetRegions, showToast]);
+  }, [figmaMode, handleFigmaAutoMap, selectedTemplate, targetRegions, showToast]);
 
   // ── Generate Output ───────────────────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
+    if (figmaMode) { await handleFigmaGenerate(); return; }
     if (!selectedTemplate) {
       showToast('error', 'Select a source template first.');
       return;
@@ -1109,7 +1281,7 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedTemplate, mappings, targetRegions, showToast]);
+  }, [figmaMode, handleFigmaGenerate, selectedTemplate, mappings, targetRegions, showToast]);
 
   // ── Copy / Download ───────────────────────────────────────────────────────
   const handleCopy = useCallback((text: string) => {
@@ -1160,10 +1332,45 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
           ))}
         </div>
 
+        {/* Figma mode toggle */}
+        <button
+          onClick={handleToggleFigmaMode}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border',
+            figmaMode
+              ? 'bg-violet-600 border-violet-700 text-white hover:bg-violet-700'
+              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-400 hover:text-violet-700 dark:hover:text-violet-300'
+          )}
+          title={figmaMode ? 'Switch to standard Target Builder mode' : 'Switch to Figma Target Layout mode'}
+        >
+          {figmaMode ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
+          <Layers size={12} />
+          {figmaMode ? 'Figma Mode' : 'Figma'}
+          {!figmaMode && (
+            <span className="text-[9px] bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-1 rounded font-medium">NEW</span>
+          )}
+        </button>
+
+        {/* Import Figma button (when in figma mode or no layout loaded) */}
+        {figmaMode && (
+          <button
+            onClick={() => setShowFigmaDialog(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/40 border border-violet-200 dark:border-violet-800"
+          >
+            <Box size={12} />
+            {figmaParseResult ? `${figmaSourceName}` : 'Import Figma Layout'}
+          </button>
+        )}
+
         {/* Mapping count */}
-        {mappings.length > 0 && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-            {mappings.length} mapping(s)
+        {activeMapCount > 0 && (
+          <span className={cn(
+            'text-xs px-2 py-0.5 rounded-full',
+            figmaMode
+              ? 'text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/30'
+              : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800'
+          )}>
+            {activeMapCount} {figmaMode ? 'figma ' : ''}mapping(s)
           </span>
         )}
 
@@ -1171,16 +1378,22 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
           {/* AI Auto-map */}
           <button
             onClick={handleAutoMap}
-            disabled={isAutoMapping || !selectedTemplate || targetRegions.length === 0}
+            disabled={
+              (figmaMode ? (isFigmaAutoMapping || !figmaParseResult) : (isAutoMapping || targetRegions.length === 0))
+              || !selectedTemplate
+            }
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300',
-              'hover:bg-purple-100 dark:hover:bg-purple-900/40',
+              figmaMode
+                ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/40'
+                : 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40',
               'disabled:opacity-40 disabled:cursor-not-allowed'
             )}
           >
-            {isAutoMapping ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-            Auto-map
+            {(figmaMode ? isFigmaAutoMapping : isAutoMapping)
+              ? <Loader2 size={13} className="animate-spin" />
+              : <Sparkles size={13} />}
+            {figmaMode ? 'Auto-map to Figma' : 'Auto-map'}
             <span className="text-[10px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 px-1 rounded font-medium">Mock AI</span>
           </button>
 
@@ -1196,7 +1409,7 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
           {/* Generate */}
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || mappings.length === 0}
+            disabled={isGenerating || activeMapCount === 0}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
               'bg-rose-600 hover:bg-rose-700 text-white',
@@ -1258,37 +1471,55 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
 
           {/* Center: Connector Canvas */}
           <ConnectorCanvas
-            mappings={mappings}
+            mappings={activeMappings}
             selectedMappingId={selectedMappingId}
             onSelectMapping={setSelectedMappingId}
-            onDeleteMapping={handleDeleteMapping}
-            onChangeMappingType={handleChangeMappingType}
+            onDeleteMapping={figmaMode
+              ? (id) => { setFigmaMappings((prev) => prev.filter((m) => m.id !== id)); setFigmaTransformResult(null); }
+              : handleDeleteMapping
+            }
+            onChangeMappingType={figmaMode
+              ? (id, type) => setFigmaMappings((prev) => prev.map((m) => m.id === id ? { ...m, mappingType: type } : m))
+              : handleChangeMappingType
+            }
             connectingFromId={connectingFromId}
             sourceTemplate={selectedTemplate}
-            targetRegions={targetRegions}
+            targetRegions={activeTargetRegions}
             connectorPaths={connectorPaths}
             containerWidth={svgSize.w}
             containerHeight={svgSize.h}
           />
 
-          {/* Right: Target Builder */}
-          <TargetBuilderPanel
-            targetRegions={targetRegions}
-            onAddRegion={handleAddTargetRegion}
-            onRemoveRegion={handleRemoveTargetRegion}
-            onUpdateRegion={handleUpdateTargetRegion}
-            connectingFromId={connectingFromId}
-            onCompleteConnect={handleCompleteConnect}
-            mappings={mappings}
-            targetRegionRefs={targetRegionRefs}
-          />
+          {/* Right: Target Builder (standard) or Figma Target Panel */}
+          {figmaMode ? (
+            <FigmaTargetPanel
+              figmaNodes={figmaParseResult?.nodes ?? []}
+              figmaRegions={figmaRegions}
+              mappings={figmaMappings}
+              connectingFromId={connectingFromId}
+              onSelectNode={handleFigmaNodeSelect}
+              onCancelConnect={() => setConnectingFromId(null)}
+              targetRegionRefs={targetRegionRefs}
+            />
+          ) : (
+            <TargetBuilderPanel
+              targetRegions={targetRegions}
+              onAddRegion={handleAddTargetRegion}
+              onRemoveRegion={handleRemoveTargetRegion}
+              onUpdateRegion={handleUpdateTargetRegion}
+              connectingFromId={connectingFromId}
+              onCompleteConnect={handleCompleteConnect}
+              mappings={mappings}
+              targetRegionRefs={targetRegionRefs}
+            />
+          )}
         </div>
       )}
 
       {activeTab === 'output' && (
         <div className="flex-1 overflow-hidden">
           <OutputPanel
-            result={transformResult}
+            result={activeTransformResult}
             isGenerating={isGenerating}
             onCopy={handleCopy}
             onDownload={handleDownload}
@@ -1300,10 +1531,18 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
         <div className="flex-1 overflow-hidden">
           <ValidationPanel
             selectedTemplate={selectedTemplate}
-            targetRegions={targetRegions}
-            mappings={mappings}
+            targetRegions={activeTargetRegions}
+            mappings={activeMappings}
           />
         </div>
+      )}
+
+      {/* Figma Import Dialog */}
+      {showFigmaDialog && (
+        <FigmaImportDialog
+          onImport={handleFigmaImport}
+          onClose={() => setShowFigmaDialog(false)}
+        />
       )}
 
       {ToastEl}

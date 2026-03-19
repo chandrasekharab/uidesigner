@@ -940,3 +940,99 @@ export function transformUsingRegionMapping(
     log,
   };
 }
+
+// ─── Figma Layout Transformation ─────────────────────────────────────────────
+// Extends the standard region-mapping transformer to use Figma-derived target
+// regions. The Figma layout drives the structural shape of the output:
+//   - auto-layout direction → flex / inline
+//   - grid detection        → multi-column grid
+//   - tab frames            → TabsLayout
+//   - section frames        → AccordionLayout
+//
+// FigmaRegionMapping adds `targetFigmaNodeId` alongside the standard
+// `targetRegionId`, so the transformer can:
+//   a) Use the standard region pipeline (targetRegionId → layout type)
+//   b) Log the Figma node reference in the output metadata
+//
+// The function signature is intentionally compatible with transformUsingRegionMapping
+// so callers can swap between the two without restructuring their state.
+
+import type { FigmaRegionMapping } from '@/models/RegionMapping';
+import type { FigmaTargetRegion } from './figmaLayoutTransformer';
+
+export interface FigmaTransformResult extends RegionMappingTransformResult {
+  /** Figma-specific metadata appended to the log */
+  figmaLog: string[];
+  /** Map from targetRegionId → figmaNodeId for downstream consumers */
+  figmaNodeReferenceMap: Record<string, string>;
+}
+
+/**
+ * Transform a Pega source JSON into a target UIComponent[] tree,
+ * using Figma-derived layout regions as the structural target.
+ *
+ * Compatible with the standard region mapping pipeline — if a mapping has
+ * no `targetFigmaNodeId`, it is treated as a standard region mapping.
+ *
+ * @param sourcePegaJson      - Raw Pega Constellation JSON
+ * @param figmaMappings       - FigmaRegionMapping[] (extends RegionMapping)
+ * @param figmaTargetRegions  - Figma-derived TargetLayoutRegion[] (from figmaLayoutTransformer)
+ * @param sourceTemplateId    - Source template id for region metadata lookup
+ * @param options             - Optional component overrides
+ */
+export function transformUsingFigmaLayout(
+  sourcePegaJson: unknown,
+  figmaMappings: FigmaRegionMapping[],
+  figmaTargetRegions: FigmaTargetRegion[],
+  sourceTemplateId: string,
+  options: RegionMappingTransformOptions = {}
+): FigmaTransformResult {
+  const figmaLog: string[] = [];
+  const figmaNodeReferenceMap: Record<string, string> = {};
+
+  // Build figma node reference map for metadata
+  for (const m of figmaMappings) {
+    if (m.targetFigmaNodeId) {
+      figmaNodeReferenceMap[m.targetRegionId] = m.targetFigmaNodeId;
+      figmaLog.push(
+        `Figma mapping: source "${m.sourceRegionId}" → target region "${m.targetRegionId}" → Figma node "${m.targetFigmaNodeId}" (${m.targetFigmaNodeName ?? 'unnamed'})`
+      );
+    }
+  }
+
+  // Run the standard transform with figma regions as the target
+  const baseResult = transformUsingRegionMapping(
+    sourcePegaJson,
+    figmaMappings,        // FigmaRegionMapping extends RegionMapping — fully compatible
+    figmaTargetRegions,   // FigmaTargetRegion extends TargetLayoutRegion — fully compatible
+    sourceTemplateId,
+    options
+  );
+
+  // Annotate each target component with figma metadata (non-breaking)
+  const annotatedComponents = baseResult.targetComponents.map((component) => {
+    const figmaNodeId = figmaNodeReferenceMap[component.id];
+    if (figmaNodeId) {
+      return {
+        ...component,
+        props: {
+          ...component.props,
+          _figmaNodeId: figmaNodeId,
+        },
+      };
+    }
+    return component;
+  });
+
+  figmaLog.push(
+    `Figma transform complete. ${Object.keys(figmaNodeReferenceMap).length} Figma node reference(s) applied.`
+  );
+
+  return {
+    ...baseResult,
+    targetComponents: annotatedComponents,
+    figmaLog,
+    figmaNodeReferenceMap,
+    log: [...baseResult.log, ...figmaLog],
+  };
+}

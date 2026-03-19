@@ -971,3 +971,217 @@ export async function optimizeLayoutMapping(
 
   return { recommendations, overallScore, mock: true };
 }
+
+// ─── Figma Mapping AI Functions ───────────────────────────────────────────────
+// Mock implementations suitable for local dev and Vercel deployment.
+// Replace with real LLM calls by providing AI_API_KEY in your environment.
+
+import type { FigmaNode } from './figmaParser';
+import type { FigmaRegionMapping } from '@/models/RegionMapping';
+
+export interface AIFigmaMappingSuggestion {
+  sourceRegionId: string;
+  targetFigmaNodeId: string;
+  targetFigmaNodeName: string;
+  mappingType: MappingType;
+  confidence: number;
+  reason: string;
+}
+
+export interface AIFigmaMapResult {
+  suggestions: AIFigmaMappingSuggestion[];
+  autoMappedCount: number;
+  unmatchedSourceIds: string[];
+  mock: boolean;
+}
+
+export interface AIBestFigmaNodeResult {
+  figmaNodeId: string;
+  figmaNodeName: string;
+  confidence: number;
+  reason: string;
+  mock: boolean;
+}
+
+/**
+ * Suggest Figma node mappings for a set of source regions.
+ *
+ * Mock strategy:
+ *   - Name similarity between source region name and Figma node name
+ *   - Type affinity (Header → top-level Frame, Form → vertical auto-layout, etc.)
+ *   - Prefer frames with matching auto-layout direction
+ *
+ * @param sourceRegions   - Source template regions to map
+ * @param figmaNodes      - All structural Figma nodes (frames + groups)
+ */
+export async function mapPegaToFigma(
+  sourceRegions: Array<{ id: string; name: string; type: string; description?: string }>,
+  figmaNodes: FigmaNode[]
+): Promise<AIFigmaMapResult> {
+  // Simulate async latency
+  await new Promise((r) => setTimeout(r, 700));
+
+  /** Simple name similarity: 0-1 */
+  function nameSim(a: string, b: string): number {
+    const al = a.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const bl = b.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!al || !bl) return 0;
+    if (al === bl) return 1;
+    if (al.includes(bl) || bl.includes(al)) return 0.8;
+    // Bigram overlap
+    const bigrams = (s: string) =>
+      Array.from({ length: Math.max(0, s.length - 1) }, (_, i) => s.slice(i, i + 2));
+    const aBi = new Set(bigrams(al));
+    const bBi = bigrams(bl);
+    const shared = bBi.filter((bg) => aBi.has(bg)).length;
+    const denom = aBi.size + bBi.length;
+    return denom === 0 ? 0 : (2 * shared) / denom;
+  }
+
+  /** Layout affinity score: region type vs figma node layout mode */
+  function layoutAffinity(regionType: string, node: FigmaNode): number {
+    const AFFINITY: Record<string, Record<string, number>> = {
+      Header:       { horizontal: 0.9, vertical: 0.5, none: 0.3 },
+      Footer:       { horizontal: 0.9, vertical: 0.4, none: 0.3 },
+      FormSection:  { vertical: 0.95, horizontal: 0.4, none: 0.5 },
+      DataGrid:     { vertical: 0.8,  horizontal: 0.6, none: 0.5 },
+      ActivityFeed: { vertical: 0.9,  horizontal: 0.3, none: 0.4 },
+      Steps:        { horizontal: 0.8, vertical: 0.5, none: 0.3 },
+      Navigation:   { horizontal: 0.9, vertical: 0.4, none: 0.3 },
+      CaseSummary:  { vertical: 0.7,  horizontal: 0.5, none: 0.4 },
+      Card:         { vertical: 0.8,  horizontal: 0.5, none: 0.6 },
+      Tabs:         { horizontal: 0.7, vertical: 0.4, none: 0.3 },
+    };
+    const row = AFFINITY[regionType] ?? { vertical: 0.6, horizontal: 0.5, none: 0.4 };
+    return row[node.layout.mode] ?? 0.5;
+  }
+
+  // Flatten figma nodes to get all frames + groups
+  const candidates: FigmaNode[] = [];
+  function collectCandidates(nodes: FigmaNode[]) {
+    for (const n of nodes) {
+      if (n.type === 'frame' || n.type === 'group') {
+        candidates.push(n);
+        collectCandidates(n.children);
+      }
+    }
+  }
+  collectCandidates(figmaNodes);
+
+  const usedFigmaIds = new Set<string>();
+  const suggestions: AIFigmaMappingSuggestion[] = [];
+  const unmatchedSourceIds: string[] = [];
+
+  for (const src of sourceRegions) {
+    let best: { node: FigmaNode; score: number } | null = null;
+
+    for (const node of candidates) {
+      if (usedFigmaIds.has(node.id)) continue;
+      const nameScore = nameSim(src.name, node.name);
+      const affinity = layoutAffinity(src.type, node);
+      // Prefer nodes closer to top (depth = 0 or 1)
+      const depthBonus = node.depth === 0 ? 0.15 : node.depth === 1 ? 0.07 : 0;
+      const score = 0.4 * nameScore + 0.45 * affinity + depthBonus;
+      if (!best || score > best.score) {
+        best = { node, score };
+      }
+    }
+
+    if (best && best.score >= 0.4) {
+      suggestions.push({
+        sourceRegionId: src.id,
+        targetFigmaNodeId: best.node.id,
+        targetFigmaNodeName: best.node.name,
+        mappingType: 'one-to-one',
+        confidence: Math.min(0.97, best.score),
+        reason: `Name + layout affinity score: ${best.score.toFixed(2)}. "${src.name}" (${src.type}) ↔ Figma "${best.node.name}" (${best.node.rawType} / ${best.node.layout.mode})`,
+      });
+      usedFigmaIds.add(best.node.id);
+    } else {
+      unmatchedSourceIds.push(src.id);
+    }
+  }
+
+  return {
+    suggestions,
+    autoMappedCount: suggestions.length,
+    unmatchedSourceIds,
+    mock: true,
+  };
+}
+
+/**
+ * Suggest the best Figma node to map a single source region to.
+ *
+ * Useful for single-region re-mapping or "smart suggest" dropdowns.
+ *
+ * @param region        - Source region to match
+ * @param figmaNodes    - All Figma structural nodes to consider
+ * @param alreadyUsed   - Figma node ids already used in other mappings
+ */
+export async function suggestBestFigmaNode(
+  region: { id: string; name: string; type: string; description?: string },
+  figmaNodes: FigmaNode[],
+  alreadyUsed: string[] = []
+): Promise<AIBestFigmaNodeResult> {
+  await new Promise((r) => setTimeout(r, 300));
+
+  const result = await mapPegaToFigma(
+    [region],
+    figmaNodes.filter((n) => !alreadyUsed.includes(n.id))
+  );
+
+  const suggestion = result.suggestions[0];
+  if (!suggestion) {
+    return {
+      figmaNodeId: '',
+      figmaNodeName: 'No match found',
+      confidence: 0,
+      reason: 'No suitable Figma node found for this region type and name.',
+      mock: true,
+    };
+  }
+
+  return {
+    figmaNodeId: suggestion.targetFigmaNodeId,
+    figmaNodeName: suggestion.targetFigmaNodeName,
+    confidence: suggestion.confidence,
+    reason: suggestion.reason,
+    mock: true,
+  };
+}
+
+/**
+ * Auto-map all source regions to Figma nodes in one pass.
+ * Returns FigmaRegionMapping[] ready for use in the studio.
+ *
+ * @param sourceRegions   - Source template regions
+ * @param figmaNodes      - Parsed Figma nodes
+ * @param targetRegionMap - Map from figmaNodeId → TargetLayoutRegion id (pre-matched)
+ */
+export async function autoMapPegaToFigma(
+  sourceRegions: Array<{ id: string; name: string; type: string; description?: string }>,
+  figmaNodes: FigmaNode[],
+  targetRegionMap: Map<string, string>
+): Promise<FigmaRegionMapping[]> {
+  const result = await mapPegaToFigma(sourceRegions, figmaNodes);
+
+  const { v4: uuidv4 } = await import('uuid');
+
+  return result.suggestions.map((s) => {
+    const targetRegionId = targetRegionMap.get(s.targetFigmaNodeId) ?? s.targetFigmaNodeId;
+    const srcName = sourceRegions.find((r) => r.id === s.sourceRegionId)?.name ?? s.sourceRegionId;
+    return {
+      id: uuidv4(),
+      sourceRegionId: s.sourceRegionId,
+      targetRegionId,
+      targetFigmaNodeId: s.targetFigmaNodeId,
+      targetFigmaNodeName: s.targetFigmaNodeName,
+      mappingType: s.mappingType,
+      transformations: [],
+      label: `${srcName} → ${s.targetFigmaNodeName}`,
+      source: 'ai-suggested',
+      confidence: s.confidence,
+    } satisfies FigmaRegionMapping;
+  });
+}
