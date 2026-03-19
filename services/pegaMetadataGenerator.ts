@@ -495,3 +495,137 @@ function inferRegionLayout(
   const spread = Math.max(...xs) - Math.min(...xs);
   return spread > 0.3 ? 'inline' : 'stacked';
 }
+
+// ─── Schema-Aware Metadata Generator ─────────────────────────────────────────────
+// Variant of generatePegaMetadata that uses the SchemaContext to ground all
+// mapping decisions. Each generated field is annotated with the schema path
+// it came from so the UI can display mapping explanations.
+
+import type { SchemaContext, SchemaMapping } from '@/services/schemaContextService';
+import { buildMappingTable, resolveFieldFromSchema } from '@/services/schemaContextService';
+
+export interface SchemaAwareMetadata extends PegaConstellationMetadata {
+  /** The mapping table used to produce this output — id → SchemaMapping */
+  _mappings: Record<string, SchemaMapping>;
+  /** Context name used */
+  _schemaName: string;
+}
+
+/**
+ * Generate Pega Constellation metadata while consulting a SchemaContext.
+ * Each component in the ParsedDesign is matched against the schema, and
+ * the resulting field definitions honour schema types, property references,
+ * and validation rules.
+ */
+export function generateSchemaAwareMetadata(
+  design: ParsedDesign,
+  context: SchemaContext,
+  options?: { useSchemaLayout?: boolean }
+): SchemaAwareMetadata {
+  const mappingTable = buildMappingTable(design.components, context);
+
+  // Build regions using schema-resolved fields
+  const body: PegaFieldDef[] = [];
+  const actions: PegaAction[] = [];
+
+  for (const comp of design.components) {
+    if (comp.type === 'button') {
+      actions.push({
+        type: 'button',
+        label: comp.label || 'Submit',
+        actionType: comp.label?.toLowerCase().includes('cancel') ? 'Cancel' : 'Submit',
+        variant: comp.label?.toLowerCase().includes('cancel') ? 'secondary' : 'primary',
+      });
+      continue;
+    }
+
+    if (['heading', 'text', 'label'].includes(comp.type)) continue; // added below as text blocks
+
+    const resolved = resolveFieldFromSchema(comp, context);
+    const mapping = mappingTable.get(comp.id);
+
+    // Inject schema-sourced metadata
+    if (mapping) {
+      resolved._schemaType = mapping.schemaType;
+      resolved._mappingConfidence = mapping.confidence;
+    }
+
+    body.push(resolved as unknown as PegaFieldDef);
+  }
+
+  // Headings as text blocks
+  const headings = design.components.filter((c) => c.type === 'heading' || c.type === 'text');
+
+  const finalRegions: PegaRegion[] = [];
+
+  if (headings.length > 0) {
+    finalRegions.push({
+      name: 'header',
+      layout: 'stacked',
+      fields: headings.map((h) => ({
+        type: h.type === 'heading' ? ('heading' as const) : ('text' as const),
+        content: h.label,
+        variant: h.type === 'heading' ? 'h2' : 'body',
+      } as PegaText)),
+    });
+  }
+
+  // Apply schema layout preference or infer
+  const schemaLayout = options?.useSchemaLayout && context.layoutPatterns[0]
+    ? (context.layoutPatterns[0] as PegaRegion['layout'])
+    : inferRegionLayout(design.components);
+
+  finalRegions.push({
+    name: 'body',
+    layout: schemaLayout,
+    fields: body,
+  });
+
+  const viewType = (context.rawSchema &&
+    typeof context.rawSchema === 'object' &&
+    (context.rawSchema as Record<string, unknown>).view &&
+    ((context.rawSchema as Record<string, unknown>).view as Record<string, unknown>).type) as
+    | PegaView['type']
+    | undefined;
+
+  return {
+    view: {
+      type: viewType ?? inferScreenType(design.screenType),
+      name: design.title,
+      classReference: (context.rawSchema instanceof Object &&
+        'view' in (context.rawSchema as object)
+          ? ((context.rawSchema as Record<string, Record<string, unknown>>).view?.classReference as string)
+          : undefined) ?? undefined,
+      regions: finalRegions,
+      actions,
+      _meta: {
+        generatedBy: 'design-parser',
+        parseId: design.parseId,
+        mock: design.mock,
+        componentCount: design.components.length,
+        confidence: computeMappingConfidence(mappingTable),
+      },
+    },
+    _mappings: Object.fromEntries(mappingTable),
+    _schemaName: context.name,
+  };
+}
+
+function inferScreenType(t: ParsedDesign['screenType']): PegaView['type'] {
+  const map: Record<ParsedDesign['screenType'], PegaView['type']> = {
+    form: 'form',
+    dashboard: 'dashboard',
+    list: 'list',
+    detail: 'detail',
+    modal: 'modal',
+    unknown: 'form',
+  };
+  return map[t] ?? 'form';
+}
+
+function computeMappingConfidence(table: Map<string, SchemaMapping>): number {
+  if (table.size === 0) return 0;
+  let sum = 0;
+  table.forEach((m) => { sum += m.confidence; });
+  return Math.round((sum / table.size) * 100) / 100;
+}

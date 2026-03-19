@@ -303,3 +303,125 @@ function buildMockPegaSchemaFromDescription(
   return { metadata, mock: true };
 }
 
+// ─── Schema-Aware AI Functions ─────────────────────────────────────────────────────
+import type { DetectedComponent } from '@/services/designParser';import type { SchemaContext, SchemaMapping } from '@/services/schemaContextService';
+import { matchComponentToSchema } from '@/services/schemaContextService';
+
+export interface AISchemaAlignResult {
+  /** Updated ParsedDesign where each component has a schema-suggested label/type */
+  refinedDesign: ParsedDesign;
+  /** Schema mappings produced by the AI */
+  mappings: Map<string, SchemaMapping>;
+  mock: boolean;
+}
+
+export interface AIComponentMatchResult {
+  schemaType: string;
+  schemaLabel: string;
+  confidence: number;
+  explanation: string;
+  alternatives: Array<{ schemaType: string; label: string; confidence: number }>;
+  mock: boolean;
+}
+
+/**
+ * Map an entire ParsedDesign to a SchemaContext using AI.
+ * Mock: uses schemaContextService heuristics. Real: would call a vision+LLM pipeline.
+ *
+ * @param design  The parsed design from the detection stage
+ * @param context The loaded schema context to guide mapping
+ * @param useAI   When true and NEXT_PUBLIC_AI_API_KEY is set, calls the real endpoint
+ */
+export async function mapDesignToSchema(
+  design: ParsedDesign,
+  context: SchemaContext,
+  useAI = false
+): Promise<AISchemaAlignResult> {
+  const hasApiKey = Boolean(
+    typeof window !== 'undefined' && process.env.NEXT_PUBLIC_AI_API_KEY
+  );
+
+  // Real AI path (stub — expand when API is available)
+  if (useAI && hasApiKey) {
+    try {
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `You are a schema-aware Pega Constellation mapper.
+
+Given these detected UI components:
+${JSON.stringify(design.components.map((c) => ({ id: c.id, type: c.type, label: c.label })), null, 2)}
+
+And this Pega Constellation schema context (component types available):
+${context.componentTypes.join(', ')}
+
+For each component id, return the best matching schema type and a 0-1 confidence.
+Return JSON array: [{ id, schemaType, confidence, explanation }]`,
+        }),
+      });
+
+      if (res.ok) {
+        // Parse AI response and merge into design — best-effort
+        // (real implementation would parse the array response here)
+        return buildMockAlignResult(design, context);
+      }
+    } catch {
+      // Fall through to mock
+    }
+  }
+
+  return buildMockAlignResult(design, context);
+}
+
+function buildMockAlignResult(
+  design: ParsedDesign,
+  context: SchemaContext
+): AISchemaAlignResult {
+  const mappings = new Map<string, SchemaMapping>();
+
+  const refinedComponents = design.components.map((comp) => {
+    const mapping = matchComponentToSchema(comp, context);
+    mappings.set(comp.id, mapping);
+
+    // Apply the best schema type back to the component (non-destructive)
+    return {
+      ...comp,
+      type: mapping.schemaType as DetectedComponent['type'],
+      label: comp.label || mapping.schemaLabel,
+      attributes: {
+        ...comp.attributes,
+        _schemaType: mapping.schemaType,
+        _mappingConfidence: mapping.confidence,
+      },
+    };
+  });
+
+  return {
+    refinedDesign: { ...design, components: refinedComponents },
+    mappings,
+    mock: true,
+  };
+}
+
+/**
+ * Suggest the best schema match for a single detected component.
+ * Useful for the "re-map" override UI when the user selects a component.
+ */
+export async function suggestBestComponentMatch(
+  comp: DetectedComponent,
+  context: SchemaContext
+): Promise<AIComponentMatchResult> {
+  // Pure heuristic (mock) — a real implementation would send the cropped
+  // bounding-box image + label to a vision model for richer context.
+  const mapping = matchComponentToSchema(comp, context);
+  return {
+    schemaType: mapping.schemaType,
+    schemaLabel: mapping.schemaLabel,
+    confidence: mapping.confidence,
+    explanation: mapping.explanation,
+    alternatives: mapping.alternatives,
+    mock: true,
+  };
+}
+

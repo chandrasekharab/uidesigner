@@ -24,6 +24,7 @@ import {
   Moon,
   Sun,
   ScanLine,
+  ShieldCheck,
 } from 'lucide-react';
 
 type ToastState = { type: 'success' | 'error'; message: string } | null;
@@ -191,6 +192,17 @@ export const Toolbar = memo(function Toolbar() {
         >
           <ScanLine size={12} /> Generate
         </button>
+        <button
+          onClick={() => setAppMode('schema-design')}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+            appMode === 'schema-design'
+              ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          )}
+        >
+          <ShieldCheck size={12} /> Schema
+        </button>
       </div>
 
       {/* Builder-only controls */}
@@ -235,6 +247,13 @@ export const Toolbar = memo(function Toolbar() {
         <span className="text-xs text-blue-600 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
           <Play size={12} />
           A2UI Renderer Experience
+        </span>
+      )}
+
+      {appMode === 'schema-design' && (
+        <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium ml-1 hidden md:flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">
+          <ShieldCheck size={12} />
+          Schema-Aware Design Generator
         </span>
       )}
 
