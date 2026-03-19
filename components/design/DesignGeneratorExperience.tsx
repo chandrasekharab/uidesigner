@@ -28,6 +28,8 @@ import {
   RotateCcw,
   Info,
   FileCode2,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { parseDesignInput } from '@/services/designParser';
@@ -39,6 +41,14 @@ import type { PegaConstellationMetadata } from '@/services/pegaMetadataGenerator
 import { DetectionOverlay } from './DetectionOverlay';
 import { MOCK_DETECTION_SCENARIOS } from '@/data/mockDesignSamples';
 import type { MockScenario } from '@/data/mockDesignSamples';
+import {
+  getAllDesignTransforms,
+  saveDesignTransform,
+  deleteDesignTransform,
+  updateDesignTransform,
+  countTransformsForTitle,
+} from '@/services/designTransformService';
+import type { DesignTransform } from '@/services/designTransformService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +85,13 @@ export const DesignGeneratorExperience = memo(function DesignGeneratorExperience
   // ── Copy state ───────────────────────────────────────────────────────────────
   const [copied, setCopied] = useState(false);
 
+  // ── Saved transforms state ───────────────────────────────────────────────────
+  const [savedTransforms, setSavedTransforms] = useState<DesignTransform[]>([]);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [showSaved, setShowSaved] = useState(true);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const setAppMode = useBuilderStore((s) => s.setAppMode);
@@ -86,6 +103,10 @@ export const DesignGeneratorExperience = memo(function DesignGeneratorExperience
       if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     };
   }, [imagePreviewUrl]);
+
+  useEffect(() => {
+    setSavedTransforms(getAllDesignTransforms());
+  }, []);
 
   // ─── Handlers ────────────────────────────────────────────────────────────────
 
@@ -257,6 +278,47 @@ export const DesignGeneratorExperience = memo(function DesignGeneratorExperience
     setPendingTransformJSON(JSON.stringify(pegaMetadata, null, 2));
     setAppMode('transform');
   }, [pegaMetadata, setPendingTransformJSON, setAppMode]);
+
+  const handleSaveTransform = useCallback(() => {
+    if (!parsedDesign || !pegaMetadata) return;
+    const count = countTransformsForTitle(parsedDesign.title);
+    const name = `${parsedDesign.title} — v${count + 1}`;
+    saveDesignTransform({
+      name,
+      sourceTitle: parsedDesign.title,
+      parsedDesign,
+      overrides,
+      pegaMetadata,
+      isMockResult,
+    });
+    setSavedTransforms(getAllDesignTransforms());
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+  }, [parsedDesign, pegaMetadata, overrides, isMockResult]);
+
+  const handleLoadTransform = useCallback((t: DesignTransform) => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(null);
+    setUploadedFile(null);
+    setParsedDesign(t.parsedDesign);
+    setPegaMetadata(t.pegaMetadata);
+    setOverrides(t.overrides);
+    setIsMockResult(t.isMockResult);
+    setStep('done');
+    setError(null);
+    setSelectedCompId(null);
+  }, [imagePreviewUrl]);
+
+  const handleDeleteTransform = useCallback((id: string) => {
+    deleteDesignTransform(id);
+    setSavedTransforms(getAllDesignTransforms());
+  }, []);
+
+  const handleRenameTransform = useCallback((id: string, name: string) => {
+    updateDesignTransform(id, { name: name.trim() || 'Untitled' });
+    setSavedTransforms(getAllDesignTransforms());
+    setRenamingId(null);
+  }, []);
 
   const isRunnable =
     (inputMode === 'upload' && uploadedFile !== null) ||
@@ -506,6 +568,77 @@ export const DesignGeneratorExperience = memo(function DesignGeneratorExperience
             </div>
           </div>
 
+          {/* Saved Transforms */}
+          {savedTransforms.length > 0 && (
+            <div className="px-4 pb-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+              <button
+                onClick={() => setShowSaved((v) => !v)}
+                className="flex items-center gap-1.5 w-full text-left mb-2"
+              >
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide flex-1">
+                  Saved Transforms
+                </p>
+                <span className="text-[9px] bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded-full font-bold">
+                  {savedTransforms.length}
+                </span>
+                <ChevronRight size={10} className={cn('text-slate-400 transition-transform', showSaved && 'rotate-90')} />
+              </button>
+              {showSaved && (
+                <div className="space-y-1.5 max-h-60 overflow-y-auto pr-0.5">
+                  {savedTransforms.map((t) => (
+                    <div
+                      key={t.id}
+                      className="group/item flex items-start gap-2 px-2 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700 transition-colors cursor-pointer"
+                      onClick={() => handleLoadTransform(t)}
+                    >
+                      <div className="w-5 h-5 rounded bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                        <Bookmark size={9} className="text-violet-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {renamingId === t.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => handleRenameTransform(t.id, renameValue || t.name)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRenameTransform(t.id, renameValue || t.name);
+                              if (e.key === 'Escape') setRenamingId(null);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full text-[10px] font-semibold bg-white dark:bg-slate-700 border border-violet-300 dark:border-violet-600 rounded px-1 py-0.5 mb-0.5"
+                          />
+                        ) : (
+                          <p
+                            className="text-[10px] font-semibold text-slate-700 dark:text-slate-200 truncate"
+                            title="Double-click to rename"
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setRenamingId(t.id);
+                              setRenameValue(t.name);
+                            }}
+                          >
+                            {t.name}
+                          </p>
+                        )}
+                        <p className="text-[9px] text-slate-400 truncate">
+                          {t.parsedDesign.components.length} components
+                          {' · '}{new Date(t.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTransform(t.id); }}
+                        className="opacity-0 group-hover/item:opacity-100 p-0.5 rounded hover:text-red-500 text-slate-400 transition-all shrink-0 mt-0.5"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>{/* end scrollable body */}
 
         {/* Fixed footer — always visible, never scrolls away */}
@@ -715,6 +848,19 @@ export const DesignGeneratorExperience = memo(function DesignGeneratorExperience
                 </p>
               </div>
             )}
+            <button
+              onClick={handleSaveTransform}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all border',
+                savedFlash
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400'
+                  : 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/40'
+              )}
+            >
+              {savedFlash
+                ? <><BookmarkCheck size={12} /> Saved!</>
+                : <><Bookmark size={12} /> Save Transform</>}
+            </button>
             <button
               onClick={handleSendToTransform}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-orange-600 text-white hover:bg-orange-700 shadow-md hover:shadow-orange-200 dark:hover:shadow-orange-900/40 transition-all"
