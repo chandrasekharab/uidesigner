@@ -546,6 +546,46 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
   const [arrows,        setArrows]        = useState<ComputedArrow[]>([]);
   const [svgSize,       setSvgSize]       = useState({ w: 0, h: 0 });
 
+  // ── Panel widths (resizable) ─────────────────────────────────────────────
+  const MIN_PANEL = 160;
+  const MAX_PANEL = 520;
+  const [leftW,  setLeftW]  = useState(276);
+  const [rightW, setRightW] = useState(276);
+  // Which handle is being dragged: 'left' | 'right' | null
+  const resizeDragRef = useRef<{ side: 'left' | 'right'; startX: number; startW: number } | null>(null);
+
+  const handleResizeStart = useCallback(
+    (e: React.PointerEvent, side: 'left' | 'right') => {
+      e.preventDefault();
+      e.stopPropagation();
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      resizeDragRef.current = {
+        side,
+        startX: e.clientX,
+        startW: side === 'left' ? leftW : rightW,
+      };
+    },
+    [leftW, rightW],
+  );
+
+  const handleResizeMove = useCallback(
+    (e: React.PointerEvent) => {
+      const rd = resizeDragRef.current;
+      if (!rd) return;
+      const delta = e.clientX - rd.startX;
+      const next = Math.min(MAX_PANEL, Math.max(MIN_PANEL,
+        rd.side === 'left' ? rd.startW + delta : rd.startW - delta,
+      ));
+      if (rd.side === 'left') setLeftW(next);
+      else                    setRightW(next);
+    },
+    [],
+  );
+
+  const handleResizeEnd = useCallback(() => {
+    resizeDragRef.current = null;
+  }, []);
+
   // ── History (undo / redo) ────────────────────────────────────────────────
   const historyRef    = useRef<RegionMapping[][]>([[...mappings]]);
   const historyIdx    = useRef(0);
@@ -904,10 +944,10 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
         <div
           ref={containerRef}
           className="relative flex flex-1 overflow-hidden"
-          style={{ cursor: dragState ? 'crosshair' : 'default' }}
-          onPointerMove={handleMove}
-          onPointerUp={handleUp}
-          onPointerLeave={() => dragState && setDragState(null)}
+          style={{ cursor: resizeDragRef.current ? 'col-resize' : dragState ? 'crosshair' : 'default' }}
+          onPointerMove={(e) => { handleResizeMove(e); handleMove(e); }}
+          onPointerUp={(e) => { handleResizeEnd(); handleUp(); }}
+          onPointerLeave={() => { resizeDragRef.current = null; if (dragState) setDragState(null); }}
           onClick={() => { if (!dragState) setSelectedId(null); }}
         >
           {/* ── SVG overlay ───────────────────────────────────────────── */}
@@ -998,8 +1038,8 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
 
           {/* ── Left: Source panel ────────────────────────────────────── */}
           <div
-            className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700"
-            style={{ width: 276, zIndex: 10, position: 'relative' }}
+            className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900"
+            style={{ width: leftW, minWidth: MIN_PANEL, maxWidth: MAX_PANEL, zIndex: 10, position: 'relative', flexShrink: 0 }}
           >
             {/* Panel header */}
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0">
@@ -1043,6 +1083,23 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
             </div>
           </div>
 
+          {/* ── Left resize handle ───────────────────────────────────── */}
+          <div
+            className="group relative z-20 flex items-center justify-center shrink-0"
+            style={{ width: 8, cursor: 'col-resize' }}
+            onPointerDown={(e) => handleResizeStart(e, 'left')}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeEnd}
+          >
+            <div className="w-0.5 h-full bg-slate-200 dark:bg-slate-700 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-600 transition-colors" />
+            {/* Grip dots */}
+            <div className="absolute flex flex-col gap-1 pointer-events-none">
+              {[0,1,2].map((i) => (
+                <div key={i} className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-500 transition-colors" />
+              ))}
+            </div>
+          </div>
+
           {/* ── Center: dot-grid background ──────────────────────────── */}
           <div
             className="flex-1 overflow-hidden"
@@ -1072,10 +1129,26 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
             )}
           </div>
 
+          {/* ── Right resize handle ──────────────────────────────────── */}
+          <div
+            className="group relative z-20 flex items-center justify-center shrink-0"
+            style={{ width: 8, cursor: 'col-resize' }}
+            onPointerDown={(e) => handleResizeStart(e, 'right')}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeEnd}
+          >
+            <div className="w-0.5 h-full bg-slate-200 dark:bg-slate-700 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-600 transition-colors" />
+            <div className="absolute flex flex-col gap-1 pointer-events-none">
+              {[0,1,2].map((i) => (
+                <div key={i} className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-500 transition-colors" />
+              ))}
+            </div>
+          </div>
+
           {/* ── Right: Target panel ───────────────────────────────────── */}
           <div
-            className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700"
-            style={{ width: 276, zIndex: 10, position: 'relative' }}
+            className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900"
+            style={{ width: rightW, minWidth: MIN_PANEL, maxWidth: MAX_PANEL, zIndex: 10, position: 'relative', flexShrink: 0 }}
           >
             {/* Panel header */}
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 shrink-0">
