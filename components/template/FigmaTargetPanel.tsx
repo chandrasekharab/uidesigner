@@ -29,7 +29,10 @@ import {
   MoveHorizontal,
   MoveVertical,
   Minus,
+  Eye,
+  List,
 } from 'lucide-react';
+import { FigmaPreviewPanel } from './FigmaPreviewPanel';
 import { cn } from '@/utils/cn';
 import type { FigmaNode } from '@/services/figmaParser';
 import { describeFigmaLayout } from '@/services/figmaParser';
@@ -116,7 +119,10 @@ const FigmaNodeRow = memo(function FigmaNodeRow({
   return (
     <div>
       <div
-        ref={canTarget && region ? (el) => { if (el) targetRegionRefs.current.set(region.id, el); } : undefined}
+        ref={canTarget && region ? (el) => {
+          if (el) targetRegionRefs.current.set(region.id, el);
+          else    targetRegionRefs.current.delete(region.id);
+        } : undefined}
         className={cn(
           'group flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all select-none',
           canTarget && isConnecting
@@ -295,6 +301,7 @@ export const FigmaTargetPanel = memo(function FigmaTargetPanel({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'frames' | 'components'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'tree' | 'preview'>('tree');
 
   // Sync module-level state for FigmaNodeRowContainer children
   _panelRegions   = figmaRegions;
@@ -351,24 +358,70 @@ export const FigmaTargetPanel = memo(function FigmaTargetPanel({
             {figmaNodes.length} top-level frame(s)
           </p>
         </div>
-        {connectingFromId && (
-          <button
-            onClick={onCancelConnect}
-            className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline font-medium"
-          >
-            Cancel
-          </button>
-        )}
+
+        <div className="flex items-center gap-1.5">
+          {/* Tree / Preview toggle */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-md p-0.5 gap-0.5">
+            <button
+              onClick={() => setViewMode('tree')}
+              title="Tree view"
+              className={cn(
+                'p-1 rounded transition-all',
+                viewMode === 'tree'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300',
+              )}
+            >
+              <List size={12} />
+            </button>
+            <button
+              onClick={() => setViewMode('preview')}
+              title="Visual preview"
+              className={cn(
+                'p-1 rounded transition-all',
+                viewMode === 'preview'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300',
+              )}
+            >
+              <Eye size={12} />
+            </button>
+          </div>
+
+          {connectingFromId && (
+            <button
+              onClick={onCancelConnect}
+              className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline font-medium"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Stats bar */}
-      <FigmaStatsBar
+      {/* Stats bar (tree mode only — the preview shows its own legend) */}
+      {viewMode === 'tree' && <FigmaStatsBar
         totalNodes={totalNodes}
         frameCount={frames}
         componentCount={components}
         mappedCount={mappedCount}
-      />
+      />}
 
+      {/* ── Preview mode ────────────────────────────────────────────────── */}
+      {viewMode === 'preview' && (
+        <FigmaPreviewPanel
+          figmaNodes={figmaNodes}
+          figmaRegions={figmaRegions}
+          mappings={mappings}
+          connectingFromId={connectingFromId}
+          onSelectNode={onSelectNode}
+          targetRegionRefs={targetRegionRefs}
+        />
+      )}
+
+      {/* ── Tree mode ───────────────────────────────────────────────────── */}
+      {viewMode === 'tree' && (
+        <>
       {/* Connecting hint */}
       {connectingFromId && (
         <div className="mx-2 mt-2 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 shrink-0">
@@ -452,6 +505,8 @@ export const FigmaTargetPanel = memo(function FigmaTargetPanel({
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 });
