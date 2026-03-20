@@ -6,6 +6,8 @@ import { useBuilderStore } from '@/store/builderStore';
 import { treeToJSON, jsonToTree } from '@/utils/jsonEngine';
 import { cn } from '@/utils/cn';
 import { Download, Upload, Copy, CheckCircle2, AlertCircle, ArrowLeftRight } from 'lucide-react';
+import { useResizePanel } from '@/utils/resizePanel';
+import { ResizeHandle } from '@/components/ResizeHandle';
 
 // Lazy-load CodeMirror to avoid SSR issues and improve bundle splitting
 const CodeMirrorEditor = dynamic(() => import('./CodeMirrorEditor'), {
@@ -20,6 +22,7 @@ const CodeMirrorEditor = dynamic(() => import('./CodeMirrorEditor'), {
 // ─── JSON Panel ───────────────────────────────────────────────────────────────
 
 export const JSONPanel = memo(function JSONPanel() {
+  const { width, handleProps } = useResizePanel({ initial: 320, direction: 'left' });
   const components = useBuilderStore((s) => s.components);
   const setComponents = useBuilderStore((s) => s.setComponents);
   const setPendingTransformJSON = useBuilderStore((s) => s.setPendingTransformJSON);
@@ -104,7 +107,8 @@ export const JSONPanel = memo(function JSONPanel() {
   }, [setComponents]);
 
   return (
-    <aside className="w-80 flex-shrink-0 bg-[#282c34] flex flex-col border-l border-slate-700">
+    <aside style={{ width }} className="relative flex-shrink-0 bg-[#282c34] flex flex-col border-l border-slate-700">
+      <ResizeHandle handleProps={handleProps} className="absolute top-0 left-0 h-full w-1.5 cursor-col-resize z-10" />
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
         <div className="flex items-center gap-2">

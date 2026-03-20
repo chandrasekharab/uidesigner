@@ -28,6 +28,8 @@ import {
   FolderOpen,
   Layers,
 } from 'lucide-react';
+import { useResizePanel } from '@/utils/resizePanel';
+import { ResizeHandle } from '@/components/ResizeHandle';
 
 interface ProjectsPanelProps {
   activeId: string | null;
@@ -52,6 +54,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
   onSelect,
   onProjectsChange,
 }: ProjectsPanelProps) {
+  const { width, handleProps } = useResizePanel({ initial: 240, direction: 'right' });
   const [projects, setProjects] = useState<TransformProject[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -105,7 +108,8 @@ export const ProjectsPanel = memo(function ProjectsPanel({
   );
 
   return (
-    <div className="w-60 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
+    <div style={{ width }} className="relative flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
+      <ResizeHandle handleProps={handleProps} className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10" />
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
         <div className="flex items-center gap-1.5">
