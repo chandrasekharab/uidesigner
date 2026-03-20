@@ -108,7 +108,7 @@ export const TargetPreview = memo(function TargetPreview({
       {/* Two-column: JSON + Canvas Preview */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: JSON output */}
-        <div className="w-1/2 flex flex-col border-r border-slate-200 dark:border-slate-700">
+        <div className="w-1/2 min-w-0 flex flex-col border-r border-slate-200 dark:border-slate-700">
           <div className="px-4 py-2 bg-slate-800 border-b border-slate-700">
             <span className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">
               Generated JSON
@@ -124,7 +124,7 @@ export const TargetPreview = memo(function TargetPreview({
         </div>
 
         {/* Right: Canvas Preview */}
-        <div className="w-1/2 flex flex-col">
+        <div className="w-1/2 min-w-0 flex flex-col">
           <div className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
               Canvas Preview

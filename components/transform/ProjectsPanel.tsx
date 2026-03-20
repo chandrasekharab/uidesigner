@@ -154,7 +154,7 @@ export const ProjectsPanel = memo(function ProjectsPanel({
       )}
 
       {/* Project list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {projects.length === 0 && !creating && (
           <div className="flex flex-col items-center justify-center h-32 text-slate-400 dark:text-slate-500 gap-2 px-4 text-center">
             <FolderOpen size={22} className="opacity-40" />

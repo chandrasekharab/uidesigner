@@ -238,7 +238,7 @@ const AnalyseStep = memo(function AnalyseStep({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
         {regions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <AlertCircle size={28} className="text-slate-300 mb-2" />

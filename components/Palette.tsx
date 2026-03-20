@@ -69,7 +69,7 @@ export const Palette = memo(function Palette() {
         </h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
         {PALETTE_ITEMS.map((item) => (
           <PaletteCard key={item.type} item={item} />
         ))}

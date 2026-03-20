@@ -457,7 +457,7 @@ export const FigmaTargetPanel = memo(function FigmaTargetPanel({
       </div>
 
       {/* Tree */}
-      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 min-h-0">
         {figmaNodes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Maximize2 size={28} className="text-slate-300 dark:text-slate-600 mb-2" />

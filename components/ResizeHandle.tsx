@@ -37,7 +37,7 @@ export function ResizeHandle({ handleProps, className }: ResizeHandleProps) {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-[3px] h-[3px] rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-500 transition-colors"
+            className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-500 transition-colors"
           />
         ))}
       </div>

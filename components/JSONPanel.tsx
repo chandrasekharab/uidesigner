@@ -137,6 +137,7 @@ export const JSONPanel = memo(function JSONPanel() {
           <button
             onClick={handleCopy}
             title="Copy JSON"
+            aria-label="Copy JSON to clipboard"
             className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
           >
             {copied ? <CheckCircle2 size={14} className="text-green-400" /> : <Copy size={14} />}

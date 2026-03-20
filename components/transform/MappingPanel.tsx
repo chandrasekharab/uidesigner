@@ -228,7 +228,7 @@ export const MappingPanel = memo(function MappingPanel({
       </div>
 
       {/* Rows */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {flatNodes.map(({ node, depth, path }) => {
           const override = overrides.get(node.id);
           const derivedTarget =

@@ -425,7 +425,7 @@ export const SchemaAwareExperience = memo(function SchemaAwareExperience() {
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
 
           {/* ── SECTION A: Design Input ───────────────────────────────── */}
           <div className="px-4 pt-3 pb-1">
@@ -895,7 +895,7 @@ export const SchemaAwareExperience = memo(function SchemaAwareExperience() {
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto min-h-0">
           {rightTab === 'json' && (
             pegaMetadata ? (
               <SyntaxJSON json={pegaMetadata} />

@@ -94,7 +94,7 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
         <div
           className={cn(
             'flex-1 overflow-y-auto p-6',
-            isDark ? 'bg-gray-900' : 'bg-slate-50 dark:bg-slate-950'
+            isDark ? 'bg-slate-900' : 'bg-slate-50 dark:bg-slate-950'
           )}
         >
           {parseError ? (
@@ -166,7 +166,7 @@ export const A2UIPreviewPanel = memo(function A2UIPreviewPanel({
         </div>
 
         {/* Events list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-24 text-slate-400 dark:text-slate-500">
               <Info size={16} className="mb-1 opacity-40" />

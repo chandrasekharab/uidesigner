@@ -209,7 +209,7 @@ export const RegionList = memo(function RegionList({
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {regions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-8 text-center px-4">
             <Layers size={28} className="text-slate-300 dark:text-slate-600 mb-2" />

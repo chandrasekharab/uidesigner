@@ -149,7 +149,7 @@ export const Toolbar = memo(function Toolbar() {
       </div>
 
       {/* Mode Tabs */}
-      <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 gap-0.5 mr-3">
+      <div className="flex overflow-x-auto bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 gap-0.5 mr-3 flex-shrink-0 scrollbar-none">
         <button
           onClick={() => setAppMode('builder')}
           className={cn(
@@ -332,7 +332,7 @@ export const Toolbar = memo(function Toolbar() {
       {/* Toast */}
       {toast && (
         <div className={cn(
-          'absolute right-4 -bottom-12 flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50 transition-all',
+          'fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50 transition-all',
           toast.type === 'success'
             ? 'bg-green-600 text-white'
             : 'bg-red-600 text-white'

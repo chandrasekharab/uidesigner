@@ -1055,7 +1055,7 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
             </div>
 
             {/* Region list */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0">
               {/* Instruction hint when no mappings yet */}
               {localMappings.length === 0 && !dragState && (
                 <div className="flex items-start gap-2 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2.5">
@@ -1174,7 +1174,7 @@ export const LiveMappingCanvas = memo(function LiveMappingCanvas({
                 </p>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+              <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0">
                 {/* Drop hint when dragging */}
                 {dragState && (
                   <div className="flex items-start gap-2 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2">

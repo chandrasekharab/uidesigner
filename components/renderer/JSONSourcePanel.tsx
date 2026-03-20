@@ -215,7 +215,7 @@ export function JSONSourcePanel({
             </div>
             <pre className="flex-1 overflow-y-auto p-2 bg-[#282c34] text-[11px] font-mono text-slate-300 whitespace-pre-wrap leading-relaxed">
               {rawJSON
-                ? JSON.stringify(JSON.parse(rawJSON), null, 2)
+                ? (() => { try { return JSON.stringify(JSON.parse(rawJSON), null, 2); } catch { return rawJSON; } })()
                 : '[]'}
             </pre>
           </>

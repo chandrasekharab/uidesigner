@@ -224,7 +224,7 @@ const SourcePanel = memo(function SourcePanel({
       )}
 
       {/* Region List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
         {selectedTemplate ? (
           <>
             <div className="flex items-center gap-2 mb-2">
@@ -342,7 +342,7 @@ const TargetBuilderPanel = memo(function TargetBuilderPanel({
       </div>
 
       {/* Region List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
         {connectingFromId && (
           <div className="rounded-lg border-2 border-dashed border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20 p-2 text-center mb-2">
             <p className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
@@ -552,7 +552,7 @@ const ConnectorCanvas = memo(function ConnectorCanvas({
       </svg>
 
       {/* Mapping cards */}
-      <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
         {connectingFromId && (
           <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-indigo-400 dark:border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/20 mb-3">
             <div

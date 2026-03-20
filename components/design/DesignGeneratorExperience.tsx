@@ -349,7 +349,7 @@ export const DesignGeneratorExperience = memo(function DesignGeneratorExperience
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
 
         {/* Input Mode Tabs */}
         <div className="px-4 pt-3">

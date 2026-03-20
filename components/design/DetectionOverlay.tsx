@@ -102,8 +102,10 @@ function BoundingBoxItem({
 
   const commitLabel = useCallback(() => {
     setEditing(false);
-    if (labelValue !== comp.label) {
-      onUpdate(comp.id, { label: labelValue });
+    if (labelValue.trim() && labelValue !== comp.label) {
+      onUpdate(comp.id, { label: labelValue.trim() });
+    } else if (!labelValue.trim()) {
+      setLabelValue(comp.label); // revert if empty
     }
   }, [labelValue, comp.label, comp.id, onUpdate]);
 
