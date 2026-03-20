@@ -1185,3 +1185,59 @@ export async function autoMapPegaToFigma(
     } satisfies FigmaRegionMapping;
   });
 }
+
+// ─── Live Visual Mapping Canvas AI ───────────────────────────────────────────
+
+import type { RegionMapping } from '@/models/RegionMapping';
+import { deriveMappingLabel } from '@/models/RegionMapping';
+
+export interface AutoConnectResult {
+  /** New mapping set (replaces the existing one) */
+  mappings: RegionMapping[];
+  /** Human-readable summary of what was connected */
+  summary: string;
+  mock: boolean;
+}
+
+/**
+ * Auto-connect source → target regions for the Live Mapping Canvas.
+ *
+ * Uses the same name-similarity + type-affinity scoring as suggestRegionMappings
+ * but returns fully-formed RegionMapping objects (with labels) ready to inject
+ * directly into the canvas state — no post-processing required by the caller.
+ *
+ * @param sourceRegions - Pega template regions
+ * @param targetRegions - Target layout or Figma-derived regions
+ */
+export async function autoConnectRegions(
+  sourceRegions: Array<{ id: string; name: string; type: string; description?: string }>,
+  targetRegions: Array<{ id: string; name: string; layout?: string }>,
+): Promise<AutoConnectResult> {
+  // Reuse the existing matcher
+  const result = await suggestRegionMappings(sourceRegions, targetRegions);
+
+  const { v4: uuid } = await import('uuid');
+
+  const mappings: RegionMapping[] = result.suggestions.map((s) => {
+    const srcName = sourceRegions.find((r) => r.id === s.sourceRegionId)?.name ?? s.sourceRegionId;
+    const tgtName = targetRegions.find((r) => r.id === s.targetRegionId)?.name ?? s.targetRegionId;
+    return {
+      id:             uuid(),
+      sourceRegionId: s.sourceRegionId,
+      targetRegionId: s.targetRegionId,
+      mappingType:    s.mappingType,
+      transformations: [],
+      label:          deriveMappingLabel(srcName, tgtName),
+      source:         'ai-suggested' as const,
+      confidence:     s.confidence,
+    };
+  });
+
+  const unmatched = result.unmatchedSourceIds.length;
+  const summary =
+    `AI auto-connected ${mappings.length} region${mappings.length !== 1 ? 's' : ''}` +
+    (unmatched > 0 ? ` · ${unmatched} source region${unmatched > 1 ? 's' : ''} could not be matched` : '') +
+    ' (mock)';
+
+  return { mappings, summary, mock: true };
+}

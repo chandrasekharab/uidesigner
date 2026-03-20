@@ -83,6 +83,7 @@ import {
   optimizeLayoutMapping,
   mapPegaToFigma,
   autoMapPegaToFigma,
+  autoConnectRegions,
 } from '@/services/aiService';
 import type { FigmaParseResult } from '@/services/figmaParser';
 import {
@@ -96,10 +97,11 @@ import {
 } from '@/services/schemaTransformer';
 import { FigmaTargetPanel } from './FigmaTargetPanel';
 import { FigmaImportDialog } from './FigmaImportDialog';
+import { LiveMappingCanvas } from '@/components/mapping/LiveMappingCanvas';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type StudioTab = 'mapping' | 'output' | 'validation' | 'log';
+type StudioTab = 'mapping' | 'canvas' | 'output' | 'validation' | 'log';
 
 interface ConnectorPath {
   id: string;
@@ -1301,6 +1303,7 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
   // ── Render ────────────────────────────────────────────────────────────────
   const studioTabs: Array<{ key: StudioTab; label: string }> = [
     { key: 'mapping',    label: 'Mapping View' },
+    { key: 'canvas',     label: '⚡ Live Canvas' },
     { key: 'output',     label: 'Output' },
     { key: 'validation', label: 'Validation' },
   ];
@@ -1513,6 +1516,30 @@ export const TemplateMappingStudio = memo(function TemplateMappingStudio() {
               targetRegionRefs={targetRegionRefs}
             />
           )}
+        </div>
+      )}
+
+      {activeTab === 'canvas' && (
+        <div className="flex-1 overflow-hidden">
+          <LiveMappingCanvas
+            sourceTemplate={selectedTemplate}
+            targetRegions={activeTargetRegions}
+            mappings={activeMappings}
+            onMappingsChange={(updated) => {
+              if (figmaMode) {
+                setFigmaMappings(updated as FigmaRegionMapping[]);
+                setFigmaTransformResult(null);
+              } else {
+                setMappings(updated);
+                setTransformResult(null);
+              }
+            }}
+            figmaMode={figmaMode}
+            onAutoMap={handleAutoMap}
+            isAutoMapping={figmaMode ? isFigmaAutoMapping : isAutoMapping}
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
+          />
         </div>
       )}
 

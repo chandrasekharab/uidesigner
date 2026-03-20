@@ -44,8 +44,14 @@ export interface RegionMapping {
    * - 'many-to-one': consolidation — multiple sources merged into one target
    */
   mappingType: MappingType;
-  /** Optional transformation rules to apply during generation */
+  /** Ordered list of transformation rules to apply during generation */
   transformations?: TransformationRule[];
+  /**
+   * Alias for transformations — provided for compatibility with the visual
+   * mapping canvas which uses the term "transformationRules".
+   * Both fields refer to the same data; use whichever is more readable.
+   */
+  transformationRules?: TransformationRule[];
   /** Optional display label overriding the auto-generated one */
   label?: string;
   /** Optional notes visible in the mapping review panel */
@@ -54,6 +60,13 @@ export interface RegionMapping {
   source: 'manual' | 'ai-suggested';
   /** AI confidence 0-1 (only set when source === 'ai-suggested') */
   confidence?: number;
+  /**
+   * Last-known visual arrow coordinates (x1/y1 = source port, x2/y2 = target port).
+   * Computed dynamically from DOM positions — stored here as a snapshot so
+   * the canvas can restore arrow positions before the DOM is measured.
+   * Not required for correctness; safe to omit or ignore.
+   */
+  pathCoordinates?: { x1: number; y1: number; x2: number; y2: number };
 }
 
 // ─── Target Layout Region ─────────────────────────────────────────────────────
