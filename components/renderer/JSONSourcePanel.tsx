@@ -26,8 +26,6 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
-import { useResizePanel } from '@/utils/resizePanel';
-import { ResizeHandle } from '@/components/ResizeHandle';
 
 export type SourceType = 'canvas' | 'transformed' | 'custom';
 
@@ -53,7 +51,6 @@ export function JSONSourcePanel({
   onCustomJSONChange,
   onRawJSONChange,
 }: JSONSourcePanelProps) {
-  const { width, handleProps } = useResizePanel({ initial: 256, direction: 'right' });
   const storeComponents = useBuilderStore((s) => s.components);
   const rendererJSON = useBuilderStore((s) => s.rendererJSON);
 
@@ -100,8 +97,7 @@ export function JSONSourcePanel({
   }
 
   return (
-    <div style={{ width }} className="relative flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
-      <ResizeHandle handleProps={handleProps} className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10" />
+    <div className="w-64 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0">
       {/* Header */}
       <div className="px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
         <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">

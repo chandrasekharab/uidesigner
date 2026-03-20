@@ -39,8 +39,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Region, RegionBoundingBox, RegionMappedSchema, RegionAnalysisResult } from '@/types/region';
-import { useResizePanel } from '@/utils/resizePanel';
-import { ResizeHandle } from '@/components/ResizeHandle';
 import { RegionCanvas }          from '@/components/region/RegionCanvas';
 import { RegionList }            from '@/components/region/RegionList';
 import { RegionEditor }          from '@/components/region/RegionEditor';
@@ -321,7 +319,6 @@ const MapExportStep = memo(function MapExportStep({
 }: MapExportStepProps) {
   const [activeTab, setActiveTab] = useState<'mapping' | 'json'>('mapping');
   const [copied, setCopied] = useState(false);
-  const { width: mappingListW, handleProps: mappingListH } = useResizePanel({ initial: 224, direction: 'right', min: 150, max: 360 });
 
   const pegaJson = buildPegaMetadataFromRegions(regions);
   const jsonStr  = JSON.stringify(pegaJson, null, 2);
@@ -398,8 +395,7 @@ const MapExportStep = memo(function MapExportStep({
       {activeTab === 'mapping' ? (
         <div className="flex flex-1 overflow-hidden">
           {/* Region list */}
-          <div style={{ width: mappingListW }} className="relative shrink-0 border-r border-slate-200 dark:border-slate-700 overflow-hidden">
-            <ResizeHandle handleProps={mappingListH} className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10" />
+          <div className="w-56 shrink-0 border-r border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="h-full overflow-y-auto">
               {regions.map((r) => (
                 <button
@@ -456,9 +452,6 @@ const MapExportStep = memo(function MapExportStep({
 export const RegionHighlightExperience = memo(function RegionHighlightExperience() {
   const { show: showToast, ToastEl } = useToast();
 
-  // ── Resizable panels ────────────────────────────────────────────────────────
-  const { width: drawListW,     handleProps: drawListH     } = useResizePanel({ initial: 224, direction: 'right', min: 150, max: 360 });
-  const { width: drawEditorW,   handleProps: drawEditorH   } = useResizePanel({ initial: 224, direction: 'left',  min: 150, max: 360 });
 
   const [step,             setStep]             = useState<Step>(0);
   const [imageUrl,         setImageUrl]         = useState<string>('');
@@ -741,8 +734,7 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
           {step1View === 'draw' && (
           <div className="flex h-full overflow-hidden">
             {/* Region list (left panel) */}
-            <div style={{ width: drawListW }} className="relative shrink-0 border-r border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-              <ResizeHandle handleProps={drawListH} className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10" />
+            <div className="w-56 shrink-0 border-r border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
               <RegionList
                 regions={regions}
                 selectedRegionId={selectedId}
@@ -788,8 +780,7 @@ export const RegionHighlightExperience = memo(function RegionHighlightExperience
             </div>
 
             {/* Region editor (right panel) */}
-            <div style={{ width: drawEditorW }} className="relative shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900">
-              <ResizeHandle handleProps={drawEditorH} className="absolute top-0 left-0 h-full w-1.5 cursor-col-resize z-10" />
+            <div className="w-56 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900">
               {selectedRegion ? (
                 <>
                   <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">

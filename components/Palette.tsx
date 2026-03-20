@@ -12,8 +12,6 @@ import {
 import { PALETTE_ITEMS } from '@/utils/componentDefaults';
 import type { PaletteItem } from '@/types';
 import { cn } from '@/utils/cn';
-import { useResizePanel } from '@/utils/resizePanel';
-import { ResizeHandle } from '@/components/ResizeHandle';
 
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
 
@@ -59,10 +57,8 @@ const PaletteCard = memo(function PaletteCard({ item }: PaletteCardProps) {
 // ─── Palette Panel ────────────────────────────────────────────────────────────
 
 export const Palette = memo(function Palette() {
-  const { width, handleProps } = useResizePanel({ initial: 224, direction: 'right' });
   return (
-    <aside style={{ width }} className="relative flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col">
-      <ResizeHandle handleProps={handleProps} className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10" />
+    <aside className="w-56 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col">
       <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           Components

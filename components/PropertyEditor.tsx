@@ -12,8 +12,6 @@ import type {
 } from '@/types';
 import { cn } from '@/utils/cn';
 import { Trash2, X } from 'lucide-react';
-import { useResizePanel } from '@/utils/resizePanel';
-import { ResizeHandle } from '@/components/ResizeHandle';
 
 // ─── Field Primitives ─────────────────────────────────────────────────────────
 
@@ -416,12 +414,9 @@ export const PropertyEditor = memo(function PropertyEditor() {
     removeComponent(selectedId);
   }, [selectedId, removeComponent]);
 
-  const { width, handleProps } = useResizePanel({ initial: 256, direction: 'left' });
-
   if (!component) {
     return (
-      <aside style={{ width }} className="relative flex-shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-6 text-center">
-        <ResizeHandle handleProps={handleProps} className="absolute top-0 left-0 h-full w-1.5 cursor-col-resize z-10" />
+      <aside className="w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-6 text-center">
         <div className="text-3xl mb-3">🖱️</div>
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">No component selected</p>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
@@ -432,8 +427,7 @@ export const PropertyEditor = memo(function PropertyEditor() {
   }
 
   return (
-    <aside style={{ width }} className="relative flex-shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
-      <ResizeHandle handleProps={handleProps} className="absolute top-0 left-0 h-full w-1.5 cursor-col-resize z-10" />
+    <aside className="w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <div>
