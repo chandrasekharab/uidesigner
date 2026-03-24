@@ -82,6 +82,10 @@ async function callRealVisionAPI(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'No image provided' }, { status: 400 });
   }
 
+  if (!file.type.startsWith('image/')) {
+    return NextResponse.json({ error: 'Uploaded file must be an image' }, { status: 400 });
+  }
+
   const bytes = await file.arrayBuffer();
   const base64 = Buffer.from(bytes).toString('base64');
   const mimeType = file.type || 'image/png';

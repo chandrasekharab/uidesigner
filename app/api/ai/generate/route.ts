@@ -110,6 +110,9 @@ export async function POST(req: NextRequest) {
     if (typeof prompt !== 'string' || !prompt.trim()) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
     }
+    if (prompt.length > 2000) {
+      return NextResponse.json({ error: 'Prompt too long (max 2000 characters)' }, { status: 400 });
+    }
 
     // ── Real AI integration point ─────────────────────────────────────────────
     // const apiKey = process.env.NEXT_PUBLIC_AI_API_KEY;

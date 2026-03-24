@@ -98,6 +98,9 @@ export const JSONPanel = memo(function JSONPanel() {
           setError((err as Error).message);
         }
       };
+      reader.onerror = () => {
+        setError('Failed to read file. Please check the file is valid JSON.');
+      };
       reader.readAsText(file);
     };
     input.click();
